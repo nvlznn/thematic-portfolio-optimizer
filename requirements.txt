@@ -1,0 +1,54 @@
+# =========================================================
+# 主題型股票投資之兩階段再平衡決策支援系統 — Python 環境
+# Python 3.12.x
+# 建議流程：
+#   brew install python@3.12
+#   /opt/homebrew/bin/python3.12 -m venv .venv
+#   source .venv/bin/activate
+#   pip install --upgrade pip
+#   pip install -r requirements.txt
+# =========================================================
+
+# ---------- 最佳化求解器（核心） ----------
+gurobipy>=11.0,<12.0          # Stage1 / Stage2 MILP 主求解器（學術授權）
+pulp>=2.8                     # CBC 備援 backend（Gurobi 出包時切換）
+highspy>=1.7                  # HiGHS solver，PuLP 可呼叫的另一備援
+
+# ---------- 數值與資料處理 ----------
+numpy>=1.26,<2.2              # 數值運算基礎；先鎖 2.x 以免 gurobipy/pandas ABI 衝突
+pandas>=2.2                   # DataFrame 主力
+pyarrow>=15.0                 # parquet 讀寫（介面契約檔格式）
+scipy>=1.13                   # 部分線性代數 / 統計
+statsmodels>=0.14             # Beta 滾動 OLS 回歸
+
+# ---------- TEJ 資料來源 ----------
+tejapi>=1.0                   # 台灣經濟新報 Python API
+yfinance>=0.2.40              # 備援資料源（TEJ 缺額度時補洞）
+requests>=2.32                # HTTP 共用
+
+# ---------- 視覺化 ----------
+matplotlib>=3.8
+seaborn>=0.13
+plotly>=5.20                  # 互動式回測曲線、權重熱圖
+
+# ---------- 設定 / 驗證 ----------
+python-dotenv>=1.0            # .env 載入 TEJ API key 等機密
+pyyaml>=6.0                   # 讀 config.yaml
+pydantic>=2.7                 # 設定檔型別驗證
+pandera>=0.19                 # DataFrame schema 驗證（對應 §7 介面契約）
+
+# ---------- Jupyter / 報告 ----------
+jupyter>=1.0
+jupyterlab>=4.2
+ipykernel>=6.29
+nbconvert>=7.16               # notebook → PDF/HTML 報告
+
+# ---------- 開發工具 ----------
+pytest>=8.2                   # 單元測試
+pytest-cov>=5.0
+ruff>=0.5                     # linter + formatter（取代 black + flake8）
+mypy>=1.10                    # 可選：型別檢查
+
+# ---------- 進度條 / 小工具 ----------
+tqdm>=4.66                    # 回測 loop 進度條
+rich>=13.7                    # 終端機美化（log / table）
