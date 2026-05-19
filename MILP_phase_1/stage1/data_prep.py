@@ -22,6 +22,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+LOT_SIZE = 1000  # 台股 1 張 = 1000 股
+
 
 @dataclass
 class Stage1Inputs:
@@ -31,7 +33,10 @@ class Stage1Inputs:
     stocks: list[str]                     # universe I，順序固定
     mu: np.ndarray                        # shape (N,)
     beta: np.ndarray                      # shape (N,)
-    liquidity_cap: np.ndarray             # shape (N,)
+    liquidity_cap: np.ndarray             # shape (N,) — proposal §5.4 的 ρ·ADV/AUM
+    price_per_lot: np.ndarray             # shape (N,) — P_i（元/張，含 lot_size）
+    L_per_stock: np.ndarray               # shape (N,) — 每檔的最低可達權重 = L_lot·P/V0
+    U_per_stock: np.ndarray               # shape (N,) — 每檔的最高可達權重 = U_lot·P/V0
     w0: np.ndarray                        # shape (N,)
     industries: list[str]                 # shape (N,)，每檔對應的產業
     industry_groups: dict[str, list[int]] # 產業 -> 該產業在 stocks 中的 index list
@@ -161,6 +166,11 @@ def _build_liquidity(
     V0: float,
     U: float,
 ) -> pd.Series:
+    """proposal §5.4 的市場衝擊上限 ℓ_i = ρ·ADV/AUM。
+
+    整數張數可行性改由 :func:`_build_lot_bounds` 透過 U_per_stock = 0 直接讓
+    模型把那種股票排除掉，職責更清楚。
+    """
     sub = prices[(prices["date"] <= rebalance_date) & (prices["stock_id"].isin(stocks))]
     sub = sub.sort_values(["stock_id", "date"]).copy()
     sub["amount_ma"] = (
@@ -169,9 +179,50 @@ def _build_liquidity(
     adv = sub.groupby("stock_id")["amount_ma"].last().reindex(stocks)
     cap = (rho * adv / V0).clip(upper=U)
     # ADV 過小者用 U 的一半作下限上限，避免 0 直接讓股票無法被選
-    cap = cap.fillna(U * 0.5)
-    cap = cap.clip(lower=0.0)
+    cap = cap.fillna(U * 0.5).clip(lower=0.0)
     return cap.rename("liquidity_cap")
+
+
+def _build_lot_bounds(
+    prices: pd.DataFrame,
+    stocks: list[str],
+    rebalance_date: pd.Timestamp,
+    L_global: float,
+    U_global: float,
+    V0: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str]]:
+    """回傳 (price_per_lot, L_per_stock, U_per_stock, lot_infeasible_list)。
+
+    與 Stage 2 的整數張數可行域 **完全一致**：
+
+    * ``L_per_stock_i = ⌈L·V0 / P_lot_i⌉ · P_lot_i / V0``
+    * ``U_per_stock_i = ⌊U·V0 / P_lot_i⌋ · P_lot_i / V0``
+
+    這把 Stage 2 的張數鏈接限制 ``L_lot·z ≤ x ≤ U_lot·z`` 投影回 Stage 1 的權重空間，
+    讓兩階段在 w 軸上有相同的可行域。當 ``⌊U·V0/P_lot⌋ < 1`` 時（1 張已超過 U·V0），
+    L_per_stock 與 U_per_stock 同時為 0，模型自動把該股 z 強制為 0。
+    """
+    sub = prices[(prices["date"] <= rebalance_date) & (prices["stock_id"].isin(stocks))]
+    latest_px = (
+        sub.sort_values("date").groupby("stock_id")["close"].last().reindex(stocks)
+    )
+    P_lot = (latest_px * LOT_SIZE).to_numpy(dtype=float)
+
+    valid = (P_lot > 0) & np.isfinite(P_lot)
+    L_lot = np.zeros_like(P_lot, dtype=np.int64)
+    U_lot = np.zeros_like(P_lot, dtype=np.int64)
+    L_lot[valid] = np.ceil(L_global * V0 / P_lot[valid]).astype(np.int64)
+    U_lot[valid] = np.floor(U_global * V0 / P_lot[valid]).astype(np.int64)
+
+    # 1 張都塞不進 U·V0 → 不可選
+    infeasible_mask = ~valid | (U_lot < 1)
+    infeasible = [s for s, flag in zip(stocks, infeasible_mask) if flag]
+
+    L_per_stock = np.where(infeasible_mask, 0.0, L_lot * P_lot / V0)
+    U_per_stock = np.where(infeasible_mask, 0.0, U_lot * P_lot / V0)
+    P_lot = np.nan_to_num(P_lot, nan=0.0)
+
+    return P_lot, L_per_stock, U_per_stock, infeasible
 
 
 def _build_scenarios(
@@ -230,12 +281,22 @@ def build_stage1_inputs(
 
     mu = _build_mu(wide, params_latest, cfg["mu"]).reindex(stocks).fillna(0.0)
     beta = _build_beta(params, stocks, rebalance_date)
+    V0 = float(cfg["portfolio"]["V0"])
+    L_global = float(cfg["stage1"]["L"])
+    U_global = float(cfg["stage1"]["U"])
+
     liq = _build_liquidity(
         prices, stocks, rebalance_date,
         rho=float(cfg["liquidity"]["rho"]),
         adv_window=int(cfg["liquidity"]["adv_window"]),
-        V0=float(cfg["portfolio"]["V0"]),
-        U=float(cfg["stage1"]["U"]),
+        V0=V0,
+        U=U_global,
+    )
+    P_lot, L_per_stock, U_per_stock, lot_infeasible = _build_lot_bounds(
+        prices, stocks, rebalance_date,
+        L_global=L_global,
+        U_global=U_global,
+        V0=V0,
     )
     w0 = _initial_weights(stocks, cfg["portfolio"].get("initial_weights"))
 
@@ -252,10 +313,22 @@ def build_stage1_inputs(
     )
     scenarios = scenarios_df.reindex(columns=stocks).fillna(0.0).to_numpy()
 
+    selectable = U_per_stock > 0
+    n_selectable = int(selectable.sum())
+    L_sel = L_per_stock[selectable]
     diagnostics = {
         "n_universe": len(stocks),
+        "n_selectable": n_selectable,
         "n_industries": len(groups),
         "n_scenarios": int(scenarios.shape[0]),
+        "n_lot_infeasible": len(lot_infeasible),
+        "lot_infeasible_examples": lot_infeasible[:20],
+        "L_per_stock_summary": {
+            "global_L": L_global,
+            "median": float(np.median(L_sel)) if n_selectable else 0.0,
+            "max": float(L_sel.max()) if n_selectable else 0.0,
+            "n_above_global": int((L_sel > L_global + 1e-9).sum()),
+        },
         "mu_summary": {
             "min": float(mu.min()),
             "max": float(mu.max()),
@@ -274,6 +347,9 @@ def build_stage1_inputs(
         mu=mu.to_numpy(),
         beta=beta.to_numpy(),
         liquidity_cap=liq.to_numpy(),
+        price_per_lot=P_lot,
+        L_per_stock=L_per_stock,
+        U_per_stock=U_per_stock,
         w0=w0.to_numpy(),
         industries=industries,
         industry_groups=groups,

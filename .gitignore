@@ -87,6 +87,9 @@ data/tmp/
 MILP_phase_1/output/*.json
 MILP_phase_1/output/*.csv
 MILP_phase_1/output/*.html
+MILP_phase_2/output/*.json
+MILP_phase_2/output/*.csv
+MILP_phase_2/output/*.html
 
 # =====================================================
 # 其他

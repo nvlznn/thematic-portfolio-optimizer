@@ -70,7 +70,7 @@ pip install pyarrow pandas numpy pulp pyyaml
 [Stage1] 讀取資料： data/processed
 [Stage1] 候選股 1046 檔、產業 34 個、情境 240 筆、rebalance_date=2026-04-30
 [Stage1] 求解中...
-[Stage1] 狀態=Optimal、目標=2.3534、持股=20、β=1.100、CVaR=0.0400、turnover=1.000
+[Stage1] 狀態=Optimal、目標=2.0616、持股=20、β=1.100、CVaR=0.0400、turnover=1.000
 [Stage1] 已輸出 MILP_phase_1/output/ideal_portfolio.json
 ```
 
@@ -85,14 +85,31 @@ pip install pyarrow pandas numpy pulp pyyaml
 * **限制**：
   1. 預算 $\sum w_i = 1$
   2. 持股檔數 $\sum z_i = K$
-  3. 持股權重上下限 $L z_i \le w_i \le U z_i$
+  3. 持股權重上下限 $L_i z_i \le w_i \le U_i z_i$（**per-stock，下面 §4.1 詳細**）
   4. 產業集中度 $\sum_{i \in S_j} w_i \le \gamma_j$
   5. Beta 上限 $\sum \beta_i w_i \le \beta^{\max}$
   6. 流動性 $w_i \le \ell_i$
   7. 周轉率（線性化）$\sum (\delta^+_i + \delta^-_i) \le \tau$
   8. CVaR（Rockafellar–Uryasev 線性化）$\eta + \frac{1}{(1-\alpha)|\Omega|}\sum \xi_s \le \bar{C}^{\text{risk}}$
 
-### 4.1 首期 (`w0 = 0`) 自動處理
+### 4.1 per-stock L/U：與 Stage 2 整數張數可行域同步
+
+proposal §6.2 的 $L, U$ 是 **全域純量**，但 Stage 2 的整數張數約束意味著每檔的
+**實際可達權重** 是離散值 $\{k \cdot P_i / V^0 : k \in \mathbb{Z}_{\ge 0}\}$ 與 $[0, U \cdot V^0]$ 的交集。
+為了讓兩階段在權重空間有相同的可行域，本實作把 $L, U$ 改成 per-stock：
+
+$$L_i = \lceil L \cdot V^0 / P_i^{\text{lot}} \rceil \cdot P_i^{\text{lot}} / V^0 \qquad U_i = \lfloor U \cdot V^0 / P_i^{\text{lot}} \rfloor \cdot P_i^{\text{lot}} / V^0$$
+
+其中 $P_i^{\text{lot}} = \text{close}_i \times 1000$（1 張 = 1000 股）。
+
+* **lot-infeasible** ($U_i = 0$)：1 張的價格已超過 $U \cdot V^0$，模型強制 $z_i = 0$
+* **窄帶** ($L_i = U_i$)：1 張剛好落在 $[L, U]$ 區間，若 Stage 1 選了該股就是固定 1 張
+* **一般** ($L_i < U_i$)：與 proposal 形式一致，只是 $L_i, U_i$ 略為 round 到整張倍數
+
+效果：Stage 1 → Stage 2 的 weight 偏離大幅下降（從早期版本 $\sum d_i \approx 0.48$ 降到
+$\approx 0.018$），大多數股票 deviation = 0。
+
+### 4.2 首期 (`w0 = 0`) 自動處理
 
 若期初權重全為零，從零部位起的最小周轉率必為 $\sum w_i = 1$，因此程式內部會
 自動把 $\tau$ 拉到 $2.0$（最大可能值）以避免結構性不可行。
@@ -160,7 +177,8 @@ pip install pyarrow pandas numpy pulp pyyaml
 | `mu.method` | `momentum`/`blend` | `blend` 會混入 ROE z-score |
 | `liquidity.rho` | `0.1` | 單檔部位佔 ADV 的最大比例 |
 | `stage1.K` | `20` | 目標持股檔數 |
-| `stage1.U` | `0.10` | 單檔上限（必須 ≥ 1/K） |
+| `stage1.L` | `0.01` | 全域權重下限；per-stock 會 round up 到最近的整張倍數 |
+| `stage1.U` | `0.10` | 全域權重上限；per-stock 會 round down 到最近的整張倍數 |
 | `stage1.beta_max` | `1.10` | 越低越保守 |
 | `stage1.turnover_max` | `0.50` | 首期會自動忽略 |
 | `stage1.cvar_max` | `0.04` | 越低越保守，太低會 infeasible |

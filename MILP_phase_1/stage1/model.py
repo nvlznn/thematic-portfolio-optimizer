@@ -88,8 +88,8 @@ def _build(inputs: Stage1Inputs, cfg: dict, *, relaxations: dict[str, bool] | No
     S = inputs.scenarios.shape[0]
     stage_cfg = cfg["stage1"]
     K = int(stage_cfg["K"])
-    L = float(stage_cfg["L"])
-    U = float(stage_cfg["U"])
+    L_global = float(stage_cfg["L"])
+    U_global = float(stage_cfg["U"])
     beta_max = float(stage_cfg["beta_max"])
     tau = float(stage_cfg["turnover_max"])
     alpha = float(stage_cfg["alpha"])
@@ -101,12 +101,34 @@ def _build(inputs: Stage1Inputs, cfg: dict, *, relaxations: dict[str, bool] | No
     if float(np.sum(np.abs(inputs.w0))) < 1e-9:
         tau = max(tau, 2.0)
 
-    if L * K > 1.0 + 1e-9 or U * K < 1.0 - 1e-9:
-        raise ValueError(f"參數不可行：LK={L*K:.3f}、UK={U*K:.3f} 需滿足 LK<=1<=UK")
+    # 每檔的可達權重界線（與 Stage 2 整數張數同步），由 data_prep 算好
+    L_arr = inputs.L_per_stock
+    U_arr = inputs.U_per_stock
+    selectable = U_arr > 0
+    if int(selectable.sum()) < K:
+        raise ValueError(
+            f"通過整數張數可行性的可選股 {int(selectable.sum())} 檔不足 K={K}；"
+            f"請降低 K 或提高 V0"
+        )
+    # 預檢：K 個最小 L_i 之和必須 ≤ 1（必要條件）
+    L_sel_sorted = np.sort(L_arr[selectable])
+    U_sel_sorted = np.sort(U_arr[selectable])[::-1]
+    min_L_sum = float(L_sel_sorted[:K].sum())
+    max_U_sum = float(U_sel_sorted[:K].sum())
+    if min_L_sum > 1.0 + 1e-9:
+        raise ValueError(
+            f"參數不可行：K 個最小 L_i 之和 = {min_L_sum:.3f} > 1.0；"
+            f"高股價迫使 L_i 變大，請降 K 或 stage1.L"
+        )
+    if max_U_sum < 1.0 - 1e-9:
+        raise ValueError(
+            f"參數不可行：K 個最大 U_i 之和 = {max_U_sum:.3f} < 1.0；"
+            f"請提高 K 或 stage1.U"
+        )
 
     m = pulp.LpProblem("Stage1_Ideal_Portfolio", pulp.LpMaximize)
 
-    w = [pulp.LpVariable(f"w_{i}", lowBound=0.0, upBound=U) for i in range(N)]
+    w = [pulp.LpVariable(f"w_{i}", lowBound=0.0, upBound=float(U_arr[i])) for i in range(N)]
     z = [pulp.LpVariable(f"z_{i}", cat=pulp.LpBinary) for i in range(N)]
     dp = [pulp.LpVariable(f"dp_{i}", lowBound=0.0) for i in range(N)]
     dn = [pulp.LpVariable(f"dn_{i}", lowBound=0.0) for i in range(N)]
@@ -122,10 +144,14 @@ def _build(inputs: Stage1Inputs, cfg: dict, *, relaxations: dict[str, bool] | No
     # (2) 持股檔數
     m += pulp.lpSum(z) == K, "K_count"
 
-    # (3) 持股權重上下限
+    # (3) 持股權重上下限（per-stock，已對齊 Stage 2 整數張數可行域）
+    # 注意：若 L_arr[i] = U_arr[i] = 0（lot-infeasible），上下界都是 0，w_i 強制為 0，
+    # 但 z_i 變數仍可以被 solver 隨意設 1 來滿足 Σz=K。下面加一條 z_i = 0 把這條洞補起來。
     for i in range(N):
-        m += w[i] >= L * z[i], f"lb_{i}"
-        m += w[i] <= U * z[i], f"ub_{i}"
+        m += w[i] >= float(L_arr[i]) * z[i], f"lb_{i}"
+        m += w[i] <= float(U_arr[i]) * z[i], f"ub_{i}"
+        if U_arr[i] <= 1e-12:
+            m += z[i] == 0, f"infeasible_{i}"
 
     # (4) 產業/主題集中度
     if not relaxations.get("industry", False):
