@@ -1,0 +1,52 @@
+# Stage1 設定檔
+# 對應 §7.7 介面契約 + proposal §6.2 的所有可調參數
+
+universe:
+  # 候選股池基本篩選
+  min_market_cap: 5.0e+9      # 市值門檻：50 億
+  min_history_days: 200       # 至少有 200 個交易日才入池（lookback 用）
+  require_industry: true       # 排除 ETF/沒有產業分類者
+
+mu:
+  # μ_i：以 12-1 動能為主；若可用日數不足，自動降階到可用視窗
+  lookback_months: 11          # 取過去 11 個月報酬
+  skip_recent_months: 1        # 排除最近 1 個月（避免反轉效應）
+  method: "momentum"           # "momentum" / "blend"
+  blend_weights:               # method == blend 時使用
+    momentum: 0.6
+    roe: 0.4
+
+liquidity:
+  rho: 0.10                    # 單檔部位 / ADV 的最大佔比
+  adv_window: 20               # ADV 滾動天數
+
+scenarios:
+  lookback_days: 240           # 取過去 240 個交易日報酬作為情境
+  return_type: "log"           # "log" 或 "simple"
+
+stage1:
+  K: 20                        # 目標持股檔數
+  L: 0.01                      # 持股時最低權重
+  U: 0.10                      # 單檔最高權重
+  beta_max: 1.10               # 投資組合 Beta 上限
+  turnover_max: 0.50           # 最大權重周轉率（首期 w0=0 時實質上是 2，預留彈性）
+  alpha: 0.95                  # CVaR 信賴水準
+  cvar_max: 0.04               # 單期投資組合 CVaR 上限（4%）
+  # 產業上限：未列出之產業套用 default
+  industry_caps:
+    default: 0.35
+    半導體業: 0.45
+    電子零組件: 0.30
+    生技醫療業: 0.25
+
+solver:
+  backend: "cbc"               # cbc / gurobi / auto；預設 CBC 以避免無授權時報錯
+  time_limit: 120              # 秒
+  mip_gap: 0.005
+  verbose: false
+
+# 投資組合層級
+portfolio:
+  V0: 1.0e+7                   # 1000 萬期初總資產（用於 ℓ_i 計算）
+  rebalance_date: null         # null = 自動取 prices.parquet 最新日期；或 "YYYY-MM-DD"
+  initial_weights: {}          # 期初權重 w_i^0：股票代碼 -> 權重；空字典表示首期
