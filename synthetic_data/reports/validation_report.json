@@ -1,0 +1,873 @@
+{
+  "summary": {
+    "n_total": 27,
+    "by_overall": {
+      "OK_FEASIBLE": 24,
+      "OK_RELAXED": 3
+    },
+    "total_runtime_s": 3.9789327499456704
+  },
+  "results": [
+    {
+      "instance_id": "SYN_001_size20x100",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_001_size20x100",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 0.4550418460777698,
+        "stage1_runtime_s": 0.0689402089919895,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.010562821,
+        "stage2_runtime_s": 0.02916416700463742,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 22318.908,
+        "stage2_n_trades": 12
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_002_size20x250",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_002_size20x250",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 0.8041203614645214,
+        "stage1_runtime_s": 0.05009749997407198,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.01920436548,
+        "stage2_runtime_s": 0.02131012501195073,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 105405.41,
+        "stage2_n_trades": 12
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_003_size20x500",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [
+          "僅 18/20 過 min_market_cap"
+        ],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_003_size20x500",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 0.7207428625251886,
+        "stage1_runtime_s": 0.04620025004260242,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.014050088859999999,
+        "stage2_runtime_s": 0.01974316604901105,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 62518.549,
+        "stage2_n_trades": 12
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_004_size50x100",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_004_size50x100",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 1.4511532201806412,
+        "stage1_runtime_s": 0.041997082997113466,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.015443695700000001,
+        "stage2_runtime_s": 0.034862041007727385,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 50278.778,
+        "stage2_n_trades": 18
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_005_size50x250",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [
+          "僅 46/50 過 min_market_cap"
+        ],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_005_size50x250",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 1.1294146767435147,
+        "stage1_runtime_s": 0.08057720796205103,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.0206886227,
+        "stage2_runtime_s": 0.028292292030528188,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 73817.255,
+        "stage2_n_trades": 18
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_006_size50x500",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [
+          "僅 45/50 過 min_market_cap"
+        ],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_006_size50x500",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 1.3693195731554275,
+        "stage1_runtime_s": 0.0809799589915201,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.020577870590000002,
+        "stage2_runtime_s": 0.022007000050507486,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 3597.018,
+        "stage2_n_trades": 18
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_007_size100x100",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_007_size100x100",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 1.6630215394045746,
+        "stage1_runtime_s": 0.07476754207164049,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.01471590796,
+        "stage2_runtime_s": 0.02208587503992021,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 7940.6599,
+        "stage2_n_trades": 25
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_008_size100x250",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_008_size100x250",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 1.447548180609311,
+        "stage1_runtime_s": 0.13863029202912003,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.04309454780000001,
+        "stage2_runtime_s": 0.020076457993127406,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 108982.95,
+        "stage2_n_trades": 25
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_009_size100x500",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [
+          "僅 94/100 過 min_market_cap"
+        ],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_009_size100x500",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 1.5951078389603641,
+        "stage1_runtime_s": 0.12849045800976455,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.017387138734000003,
+        "stage2_runtime_s": 0.01883191696833819,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 34691.031,
+        "stage2_n_trades": 25
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_010_dist_t_independent",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [
+          "僅 45/50 過 min_market_cap"
+        ],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_010_dist_t_independent",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 0.9417554422927435,
+        "stage1_runtime_s": 0.06830262497533113,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.02036162692,
+        "stage2_runtime_s": 0.020701542031019926,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 73855.132,
+        "stage2_n_trades": 20
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_011_dist_t_block",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_011_dist_t_block",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 1.4613261288868,
+        "stage1_runtime_s": 0.07051066600251943,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.017882152749999998,
+        "stage2_runtime_s": 0.021043707965873182,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 9643.943,
+        "stage2_n_trades": 20
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_012_dist_t_factor",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [
+          "僅 47/50 過 min_market_cap"
+        ],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_012_dist_t_factor",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 1.0084652359042072,
+        "stage1_runtime_s": 0.06622420798521489,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.0254641699,
+        "stage2_runtime_s": 0.02832308306824416,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 26792.234,
+        "stage2_n_trades": 20
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_013_dist_bootstrap_independent",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_013_dist_bootstrap_independent",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 1.6265037745499844,
+        "stage1_runtime_s": 0.0750993340043351,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.02365180997,
+        "stage2_runtime_s": 0.0207234580302611,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 53950.238,
+        "stage2_n_trades": 20
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_014_dist_bootstrap_block",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_014_dist_bootstrap_block",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 1.0922007816379165,
+        "stage1_runtime_s": 0.06704045797232538,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.0181632484,
+        "stage2_runtime_s": 0.02299429103732109,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 5418.185,
+        "stage2_n_trades": 20
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_015_dist_bootstrap_factor",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_015_dist_bootstrap_factor",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 1.7973373899428535,
+        "stage1_runtime_s": 0.07495633396320045,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.0284363163,
+        "stage2_runtime_s": 0.020483957952819765,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 86925.295,
+        "stage2_n_trades": 20
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_016_beta_wide",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [
+          "僅 43/50 過 min_market_cap"
+        ],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_016_beta_wide",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 1.0778681817892377,
+        "stage1_runtime_s": 0.067415792029351,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.015628485140000002,
+        "stage2_runtime_s": 0.019527791999280453,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 11891.344,
+        "stage2_n_trades": 20
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_017_mu_beta_pos",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [
+          "僅 46/50 過 min_market_cap"
+        ],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_017_mu_beta_pos",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 1.304454681660561,
+        "stage1_runtime_s": 0.06563008297234774,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.0329398502,
+        "stage2_runtime_s": 0.02045370906125754,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 11483.24,
+        "stage2_n_trades": 20
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_018_mu_beta_neg",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [
+          "僅 47/50 過 min_market_cap"
+        ],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_018_mu_beta_neg",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 1.4741214281719577,
+        "stage1_runtime_s": 0.07573008409235626,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.0153542904,
+        "stage2_runtime_s": 0.019294666941277683,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 576.59873,
+        "stage2_n_trades": 20
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_019_ind_concentrated",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [
+          "僅 47/50 過 min_market_cap"
+        ],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_019_ind_concentrated",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 1.1883297579347565,
+        "stage1_runtime_s": 0.07261200004722923,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.0135644038246,
+        "stage2_runtime_s": 0.019599457969889045,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 20079.89,
+        "stage2_n_trades": 20
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_020_price_lognormal",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [
+          "僅 46/50 過 min_market_cap"
+        ],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_020_price_lognormal",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 0.9836626711403651,
+        "stage1_runtime_s": 0.07441454101353884,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.01608720918,
+        "stage2_runtime_s": 0.02055558399297297,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 6498.5743,
+        "stage2_n_trades": 20
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_021_stress_normal",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [
+          "僅 44/50 過 min_market_cap"
+        ],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_021_stress_normal",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 1.3693422466575507,
+        "stage1_runtime_s": 0.07210362504702061,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.01292126918,
+        "stage2_runtime_s": 0.019379958044737577,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 11840.004,
+        "stage2_n_trades": 20
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_022_stress_tight_cvar",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_022_stress_tight_cvar",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_RELAXED",
+        "stage1_objective": 1.533548435789206,
+        "stage1_runtime_s": 0.07671095803380013,
+        "stage1_relaxed": true,
+        "stage1_relaxation_log": [
+          "  -> Infeasible",
+          "放寬限制：cvar"
+        ],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.018740187800000002,
+        "stage2_runtime_s": 0.02042325004003942,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 33872.265,
+        "stage2_n_trades": 20
+      },
+      "overall": "OK_RELAXED"
+    },
+    {
+      "instance_id": "SYN_023_stress_tight_industry",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_023_stress_tight_industry",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_RELAXED",
+        "stage1_objective": 1.1154044354385997,
+        "stage1_runtime_s": 0.1248653749935329,
+        "stage1_relaxed": true,
+        "stage1_relaxation_log": [
+          "  -> Infeasible",
+          "放寬限制：cvar",
+          "  -> Infeasible",
+          "放寬限制：turnover",
+          "  -> Infeasible",
+          "放寬限制：beta",
+          "  -> Infeasible",
+          "放寬限制：industry"
+        ],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.0353451902,
+        "stage2_runtime_s": 0.03341820801142603,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 11752.072,
+        "stage2_n_trades": 20
+      },
+      "overall": "OK_RELAXED"
+    },
+    {
+      "instance_id": "SYN_024_stress_infeas_trap",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [
+          "僅 47/50 過 min_market_cap"
+        ],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_024_stress_infeas_trap",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_RELAXED",
+        "stage1_objective": 1.167964529690174,
+        "stage1_runtime_s": 0.12012087495531887,
+        "stage1_relaxed": true,
+        "stage1_relaxation_log": [
+          "  -> Infeasible",
+          "放寬限制：cvar",
+          "  -> Infeasible",
+          "放寬限制：turnover",
+          "  -> Infeasible",
+          "放寬限制：beta",
+          "  -> Infeasible",
+          "放寬限制：industry"
+        ],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.02925600936,
+        "stage2_runtime_s": 0.0218258339446038,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 109939.28,
+        "stage2_n_trades": 20
+      },
+      "overall": "OK_RELAXED"
+    },
+    {
+      "instance_id": "SYN_025_warm_20x100",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_025_warm_20x100",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 0.8144340025926036,
+        "stage1_runtime_s": 0.030462583992630243,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.024628667119999996,
+        "stage2_runtime_s": 0.02364745899103582,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 147577.23,
+        "stage2_n_trades": 11
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_026_warm_50x250",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [
+          "僅 47/50 過 min_market_cap"
+        ],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_026_warm_50x250",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 1.129788310664688,
+        "stage1_runtime_s": 0.07368549995590001,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.046394444135999996,
+        "stage2_runtime_s": 0.03408329200465232,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 237580.61,
+        "stage2_n_trades": 18
+      },
+      "overall": "OK_FEASIBLE"
+    },
+    {
+      "instance_id": "SYN_027_warm_100x500",
+      "schema": {
+        "errors": [],
+        "ok": true
+      },
+      "economic": {
+        "errors": [],
+        "warnings": [
+          "僅 94/100 過 min_market_cap"
+        ],
+        "ok": true
+      },
+      "feasibility": {
+        "instance_id": "SYN_027_warm_100x500",
+        "stage1_status": "Optimal",
+        "stage1_classification": "OK_FEASIBLE",
+        "stage1_objective": 1.484498515825474,
+        "stage1_runtime_s": 0.15563637507148087,
+        "stage1_relaxed": false,
+        "stage1_relaxation_log": [],
+        "stage2_status": "Optimal",
+        "stage2_objective": 0.06617818309199999,
+        "stage2_runtime_s": 0.03571479197125882,
+        "n_lot_infeasible": 0,
+        "coherence_ok": true,
+        "error": null,
+        "stage2_cash_after": 16003.718,
+        "stage2_n_trades": 21
+      },
+      "overall": "OK_FEASIBLE"
+    }
+  ]
+}

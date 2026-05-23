@@ -91,6 +91,9 @@ MILP_phase_2/output/*.json
 MILP_phase_2/output/*.csv
 MILP_phase_2/output/*.html
 
+# 合成測試實例：可由 seeds 重生，不入庫（generator/validators/runners/seeds/reports 仍版控）
+synthetic_data/instances/
+
 # =====================================================
 # 其他
 # =====================================================
