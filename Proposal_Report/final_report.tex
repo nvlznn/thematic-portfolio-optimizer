@@ -246,7 +246,7 @@ $L_i^{\text{lot}}, U_i^{\text{lot}}$ 同時被 \emph{反向投影} 回 Stage 1 �
 
 \textbf{(4) 局部搜尋（1-swap）}：以「目前可行解」為起點，嘗試把每個持股 $i$ 換成 $\mu$ 前 $n_{\text{cand}}$ 名的非持股候選，重做 water-filling 與 repair；接受任何 \emph{可行且 $\mu^\top w$ 嚴格改善} 的換股。整個 swap 多輪掃描，直到無法改善為止。
 
-\textbf{多起點。}{}兩個起點同時嘗試後取最佳：(A) 貪婪選股＋多元化補救；(B) 直接以 Top-$K$（μ 前 K 名）為起點。後者保證最終目標值 \emph{至少不差於 Top-$K$ 基準}，前者則提供更多元起點。Algorithm \ref{algo:greedy} 為主流程之 pseudocode。
+\textbf{多起點。}{}兩個起點同時嘗試後取最佳：(A) 貪婪選股＋多元化補救；(B) 直接以 Top-$K$（$\mu$ 前 $K$ 名）為起點。後者保證最終目標值 \emph{至少不差於 Top-$K$ 基準}，前者則提供更多元起點。Algorithm \ref{algo:greedy} 為主流程之 pseudocode。
 
 \begin{algorithm}[!hbt]
 \caption{Greedy heuristic for Stage 1}

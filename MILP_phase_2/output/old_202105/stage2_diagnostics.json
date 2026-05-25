@@ -1,0 +1,22 @@
+{
+  "as_of": "2026-04-30",
+  "status": "Optimal",
+  "objective_value": 0.027673954,
+  "V0": 10000000.0,
+  "C0": 10000000.0,
+  "cash_after": 8432.2762,
+  "cash_pct_after": 0.00084322762,
+  "total_deviation": 0.017673954000000002,
+  "n_trades": 20,
+  "n_buys": 20,
+  "n_sells": 0,
+  "auto_lowered_L_lot": [],
+  "forced_off_high_price": [],
+  "config": {
+    "c_buy": 0.001425,
+    "c_sell": 0.004425,
+    "lambda_trade": 0.0005,
+    "L": 0.01,
+    "U": 0.1
+  }
+}
