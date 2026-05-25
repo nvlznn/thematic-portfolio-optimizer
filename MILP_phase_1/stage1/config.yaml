@@ -20,9 +20,21 @@ liquidity:
   rho: 0.10                    # 單檔部位 / ADV 的最大佔比
   adv_window: 20               # ADV 滾動天數
 
+beta:
+  # β_i 來源(Module 2 / src/params/beta.py)
+  method: "ols"                # ols(自算 vs TAIEX)/ tej_params(用 beta_3m)/ tej_raw(raw_beta.csv)
+  window: 120                  # ols 滾動視窗(交易日);對應計畫 60/120 日
+
 scenarios:
   lookback_days: 240           # 取過去 240 個交易日報酬作為情境
   return_type: "log"           # "log" 或 "simple"
+  method: "historical"         # historical(每日一情境)/ block_bootstrap
+  n_scenarios: 250             # block_bootstrap 時的情境數(計畫要求 ≥250)
+  block_size: 5                # block_bootstrap 區塊長度(交易日)
+  seed: 42                     # block_bootstrap 隨機種子(可重現)
+
+params:
+  use_precomputed: true        # Stage1 是否優先讀 factors/scenarios.parquet(否則即時計算)
 
 stage1:
   K: 20                        # 目標持股檔數

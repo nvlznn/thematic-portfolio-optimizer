@@ -264,6 +264,43 @@ def _initial_weights(stocks: list[str], init_map: dict[str, float] | None) -> pd
     return s
 
 
+def _load_precomputed(
+    processed_dir: str | Path,
+    stocks: list[str],
+    rebalance_date: pd.Timestamp,
+    cfg: dict,
+) -> tuple[pd.Series, pd.Series, pd.Series, np.ndarray] | None:
+    """優先讀 Module 2 (B) 的 factors.parquet + scenarios.parquet。
+
+    回傳 (mu, beta, liquidity_cap, scenarios),對齊 ``stocks``;以下任一情況回 None 改即時計算:
+    config 關閉、檔案不存在、as_of 與本次 rebalance_date 不符(過期)、或未涵蓋整個 universe。
+    """
+    if not cfg.get("params", {}).get("use_precomputed", True):
+        return None
+    fdir = Path(processed_dir)
+    factors_path, scen_path = fdir / "factors.parquet", fdir / "scenarios.parquet"
+    if not (factors_path.exists() and scen_path.exists()):
+        return None
+
+    factors = pd.read_parquet(factors_path)
+    factors["stock_id"] = factors["stock_id"].astype(str).str.strip().str.split(r"\s+").str[0]
+    as_of = pd.Timestamp(factors["as_of"].iloc[0])
+    if as_of.normalize() != pd.Timestamp(rebalance_date).normalize():
+        return None  # 參數是別期算的 → 過期,回退即時計算
+    factors = factors.set_index("stock_id")
+    if any(s not in factors.index for s in stocks):
+        return None  # 未涵蓋整個 universe
+
+    mu = factors["mu"].reindex(stocks).fillna(0.0)
+    beta = factors["beta"].reindex(stocks).fillna(1.0)
+    liq = factors["liquidity_cap"].reindex(stocks).fillna(0.0)
+
+    scen_df = pd.read_parquet(scen_path).drop(columns=["scenario_id"], errors="ignore")
+    scen_df.columns = [str(c).strip().split()[0] for c in scen_df.columns]
+    scenarios = scen_df.reindex(columns=stocks).fillna(0.0).to_numpy()
+    return mu, beta, liq, scenarios
+
+
 def build_stage1_inputs(
     processed_dir: str | Path,
     cfg: dict,
@@ -283,28 +320,11 @@ def build_stage1_inputs(
     if not stocks:
         raise RuntimeError("候選股池為空 — 檢查篩選條件")
 
-    wide = _wide_prices(prices, stocks, rebalance_date)
-    params_latest = (
-        params[params["date"] <= rebalance_date]
-        .sort_values("date")
-        .groupby("stock_id")
-        .last()
-        .reset_index()
-    )
-
-    mu = _build_mu(wide, params_latest, cfg["mu"]).reindex(stocks).fillna(0.0)
-    beta = _build_beta(params, stocks, rebalance_date)
     V0 = float(cfg["portfolio"]["V0"])
     L_global = float(cfg["stage1"]["L"])
     U_global = float(cfg["stage1"]["U"])
 
-    liq = _build_liquidity(
-        prices, stocks, rebalance_date,
-        rho=float(cfg["liquidity"]["rho"]),
-        adv_window=int(cfg["liquidity"]["adv_window"]),
-        V0=V0,
-        U=U_global,
-    )
+    # lot bounds / w0 / 產業:與參數來源無關一律自算(lot bounds 綁定 Stage 2 整數張數可行域)
     P_lot, L_per_stock, U_per_stock, lot_infeasible = _build_lot_bounds(
         prices, stocks, rebalance_date,
         L_global=L_global,
@@ -319,17 +339,41 @@ def build_stage1_inputs(
     for idx, ind in enumerate(industries):
         groups.setdefault(ind, []).append(idx)
 
-    scenarios_df = _build_scenarios(
-        wide,
-        lookback_days=cfg["scenarios"]["lookback_days"],
-        return_type=cfg["scenarios"]["return_type"],
-    )
-    scenarios = scenarios_df.reindex(columns=stocks).fillna(0.0).to_numpy()
+    # μ / β / ℓ / 情境:優先讀 Module 2 (B) 的 factors/scenarios.parquet,否則即時計算(fallback)
+    precomp = _load_precomputed(processed_dir, stocks, rebalance_date, cfg)
+    if precomp is not None:
+        mu, beta, liq, scenarios = precomp
+        param_source = "precomputed"
+    else:
+        wide = _wide_prices(prices, stocks, rebalance_date)
+        params_latest = (
+            params[params["date"] <= rebalance_date]
+            .sort_values("date")
+            .groupby("stock_id")
+            .last()
+            .reset_index()
+        )
+        mu = _build_mu(wide, params_latest, cfg["mu"]).reindex(stocks).fillna(0.0)
+        beta = _build_beta(params, stocks, rebalance_date)
+        liq = _build_liquidity(
+            prices, stocks, rebalance_date,
+            rho=float(cfg["liquidity"]["rho"]),
+            adv_window=int(cfg["liquidity"]["adv_window"]),
+            V0=V0,
+            U=U_global,
+        )
+        scenarios = _build_scenarios(
+            wide,
+            lookback_days=cfg["scenarios"]["lookback_days"],
+            return_type=cfg["scenarios"]["return_type"],
+        ).reindex(columns=stocks).fillna(0.0).to_numpy()
+        param_source = "inline"
 
     selectable = U_per_stock > 0
     n_selectable = int(selectable.sum())
     L_sel = L_per_stock[selectable]
     diagnostics = {
+        "param_source": param_source,
         "n_universe": len(stocks),
         "n_selectable": n_selectable,
         "n_industries": len(groups),
