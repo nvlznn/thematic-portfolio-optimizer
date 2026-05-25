@@ -57,13 +57,13 @@ Final Project Report \\[4pt]
 \author{闕以諾 (B13303079)}
 \affil{Department of Information Management, National Taiwan University}
 
-\date{Group ID：（待補）}
+\date{Group ID：第 12 組}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-\noindent 本研究針對「主題型台股投資的再平衡決策」這個過去由投資經理人徒手處理的流程，建構出一套兩階段混合整數線性規劃（MILP）決策支援系統。第一階段以「投資吸引力分數最大化」為目標，在持股檔數、產業集中度、Beta、CVaR、周轉率與流動性等多重限制下，求解理想連續權重 $w^\star$ 與持股二元變數 $z^\star$；第二階段則把 $w^\star$ 落地為「整數張數、現金守恆、買賣互斥、考量手續費與證交稅」的可下單清單。我們另外提出一個多起點啟發式演算法（greedy + water-filling + repair + 1-swap local search），不呼叫商用 solver 即可在毫秒至秒級給出可行解。以台股 2026/04/30 為再平衡日、1{,}046 檔候選股、240 個歷史情境的真實案例上，啟發式相對 MILP 最佳解之 optimality gap 為 \textbf{2.59\%}、相對 Top-$K$ 等權基準則高出 \textbf{17.41\%}；Stage 2 的整數張數落地之累積偏離為 \textbf{0.0177}、現金剩餘僅 \textbf{0.084\%}。
+\noindent 本研究針對「主題型台股投資的再平衡決策」這個過去由投資經理人徒手處理的流程，建構出一套兩階段混合整數線性規劃（MILP）決策支援系統。第一階段以「投資吸引力分數最大化」為目標，在持股檔數、產業集中度、Beta、CVaR、周轉率與流動性等多重限制下，求解理想連續權重 $w^\star$ 與持股二元變數 $z^\star$；第二階段則把 $w^\star$ 落地為「整數張數、現金守恆、買賣互斥、考量手續費與證交稅」的可下單清單。我們另外提出一個多起點啟發式演算法（greedy + water-filling + repair + 1-swap local search），不呼叫商用 solver 即可在毫秒至秒級給出可行解。以台股 2026/05/20 為再平衡日、1{,}052 檔候選股、240 個歷史情境的真實案例上，啟發式相對 MILP 最佳解之 optimality gap 為 \textbf{1.05\%}、相對 Top-$K$ 等權基準則高出 \textbf{17.71\%}；Stage 2 的整數張數落地之累積偏離為 \textbf{0.0366}、現金剩餘僅 \textbf{0.238\%}。
 \end{abstract}
 
 
@@ -278,23 +278,28 @@ $L_i^{\text{lot}}, U_i^{\text{lot}}$ 同時被 \emph{反向投影} 回 Stage 1 �
 \section{Data collection and generation}
 \label{sec-data}
 
-\textbf{真實世界資料。}{}本研究所用之台股歷史價量資料來自 \emph{台灣經濟新報 (TEJ)}「日收盤行情」與「TEJ 主產業」資料庫，原始下載放在 \texttt{data/raw/}（CP950/Big-5 編碼），經由 \texttt{src/data/clean.py} 標準化欄位名稱、剔除指數列 (\texttt{Y9999})、處理停牌補值（forward-fill 上限 3 日）、單位換算（張 $\to$ 股、千元 $\to$ 元），再輸出為 \texttt{data/processed/prices.parquet}（§7.1 介面契約）；候選股池與市值、產業由 \texttt{candidates.parquet}（§7.2）提供。整個資料管線在 \texttt{src/data/} 與 \texttt{MILP\_phase\_1/stage1/data\_prep.py} 之間以 parquet 為介面，可被多人平行開發。
+\textbf{真實世界資料。}{}本研究所用之台股歷史價量資料來自 \emph{台灣經濟新報 (TEJ)}「日收盤行情」與「TEJ 主產業」資料庫，原始下載放在 \texttt{data/raw/}（CP950/Big-5 編碼），經由 \texttt{src/data/clean.py} 標準化欄位名稱、剔除指數列 (\texttt{Y9999})、處理停牌補值（forward-fill 上限 3 日）、單位換算（張 $\to$ 股、千元 $\to$ 元），再輸出為 \texttt{data/processed/prices.parquet}（§7.1 介面契約）；候選股池與市值、產業由 \texttt{candidates.parquet}（§7.2）提供；日頻 join 完成的價量／市值／beta\_3m／ROE／營收成長表為 \texttt{params.parquet}（§7.3）；大盤指數 (Y9999) 收盤獨立存於 \texttt{benchmark.parquet} 作為 $\beta$ 回歸用之 market factor。整個資料管線在 \texttt{src/data/} 與 \texttt{MILP\_phase\_1/stage1/data\_prep.py} 之間以 parquet 為介面，可被多人平行開發。
 
-\textbf{參數估計。}{}六個關鍵參數的構造方式如下：
+\textbf{參數估計 — Module 2 (\texttt{src/params/})。}{}吸引力分數、Beta、流動性上限與 CVaR 情境四項由獨立模組 \texttt{src/params/} 預先計算後寫入兩個契約檔：
 \begin{itemizeTight}
-    \item \textbf{$\mu_i$（吸引力分數）}：基準版採 12-1 動能——過去 11 個月對數報酬、排除最近 1 個月以避開短期反轉；可選「動能 + ROE z-score」混合版（\texttt{config.yaml.mu.method=blend}）。資料若可用視窗不足會自動降階到實際可用天數。
-    \item \textbf{$\beta_i$}：從 TEJ 預先估好的 \texttt{beta\_3m}（3 個月滾動 OLS）讀取，缺值補 $\beta_i = 1.0$ 作為市場 beta 近似。
-    \item \textbf{$\ell_i$（流動性上限）}：$\ell_i = \min(U, \rho \cdot ADV_i / V^0)$，其中 $ADV_i$ 為 20 日滾動成交金額平均、$\rho = 0.10$（單檔部位不超過 ADV 之 10\%）。
-    \item \textbf{$r_{i,s}$（CVaR 情境）}：採歷史情境法——取過去 240 個交易日的日報酬 $(r_t)_{t=t-239}^{t}$ 作為 $|\Omega| = 240$ 個情境，逐日為一個情境向量；報酬以對數型式計算。
+    \item \texttt{factors.parquet}（每檔一列）：欄位 \texttt{stock\_id, mu, beta, liquidity\_cap, w0, industry, as\_of}；
+    \item \texttt{scenarios.parquet}（每個情境一列）：欄位 \texttt{scenario\_id} 加上每檔股票一欄，值為情境報酬 $r_{i,s}$。
+\end{itemizeTight}
+入口為 \texttt{python -m src.params.build}，會根據 \texttt{MILP\_phase\_1/stage1/config.yaml} 內的 \texttt{mu / beta / liquidity / scenarios} 區段，於 \texttt{as\_of} 重新算齊所有參數；Stage 1 之 \texttt{data\_prep.py} 預設讀這兩個檔，若不存在或 \texttt{as\_of} 不符則 fallback 為即時計算，確保介面變動不會打斷下游。六個關鍵參數的構造如下：
+\begin{itemizeTight}
+    \item \textbf{$\mu_i$（吸引力分數，\texttt{params/mu.py}）}：基準版採 12-1 動能——過去 11 個月對數報酬、排除最近 1 個月以避開短期反轉；可選「動能 + ROE z-score」混合版（\texttt{config.yaml.mu.method=blend}）。資料若可用視窗不足會自動降階到實際可用天數。
+    \item \textbf{$\beta_i$（\texttt{params/beta.py}）}：預設以個股對 TAIEX (Y9999) 之過去 120 日對數報酬做滾動 OLS（method=\texttt{ols}），同檔提供 \texttt{tej\_params}（讀 \texttt{params.parquet} 的 \texttt{beta\_3m}）與 \texttt{tej\_raw}（解析原始 \texttt{raw\_beta.csv}）兩個備援。所有來源最後一律 winsorize 到 $[-1, 3]$ 並把缺值補成 $\beta_i = 1.0$。
+    \item \textbf{$\ell_i$（流動性上限，\texttt{params/liquidity.py}）}：$\ell_i = \min(U, \rho \cdot ADV_i / V^0)$，其中 $ADV_i$ 為 20 日滾動成交金額平均、$\rho = 0.10$（單檔部位不超過 ADV 之 10\%）。
+    \item \textbf{$r_{i,s}$（CVaR 情境，\texttt{params/cvar\_scenarios.py}）}：基準版採歷史情境法——取過去 240 個交易日的日報酬 $(r_t)_{t=t-239}^{t}$ 作為 $|\Omega| = 240$ 個情境，逐日為一個情境向量；報酬以對數型式計算。另提供 moving-block bootstrap（method=\texttt{block\_bootstrap}）作為情境擴增手段，符合開發計畫 §9 對 $|\Omega| \geq 250$ 之要求。
     \item \textbf{$L_i, U_i$（per-stock 權重界）}：根據 $L_i^{\text{lot}}, U_i^{\text{lot}}$ 反向投影回連續權重；當 $U_i^{\text{lot}} < 1$（一張價格已超過 $U V^0$）則該檔自動退出可選集 $z_i = 0$，避免兩階段可行域不一致。
     \item \textbf{$w_i^0$（期初權重）}：首期由設定檔指定（預設全 0、即「全現金起跑」）；rolling 回測時由上一期 Stage 2 輸出之 $x_i, C$ 反推。
 \end{itemizeTight}
 
 \textbf{Self-generated instances。}{}在進行規模掃描效能評估時（\cref{sec-eval}），我們以「$\mu$ 前 $N$ 名子集合」的方式產生 $N \in \{50, 200, 500, 1000\}$ 共四個合成 instance，並覆寫 $K$；每個 instance 的 $\beta, \ell, r_{i,s}$ 等其他參數與真實 instance 一致，藉此檢驗演算法在不同 universe 規模下的 gap 與時間表現。
 
-\textbf{真實 instance 規模。}{}以 2026/04/30 為再平衡日的真實案例為：1{,}046 檔候選股、34 個產業、240 個歷史情境；其中 49 檔股票因「1 張價格已超過 $U V^0$」（如 2330 台積電、2454 聯發科、3008 大立光）被自動標為 lot-infeasible 並從 $z = 1$ 候選集排除（這是 proposal §10 列出的模型限制 (2)：高股價迫使部分股票無法以單張權重 $\leq U$ 形式持有）。本報告所用之 parquet 介面檔於 2026-05-25 重新從 TEJ 拉取並重跑整條 pipeline——上游候選股池雖擴大為 2{,}318 檔（含產業分類），但在 $\texttt{min\_market\_cap} \geq 5 \times 10^9$ 與 $\texttt{min\_history\_days} \geq 200$ 兩道篩選後仍落在 1{,}046 檔，故報酬／風險指標與前次運行一致。
+\textbf{真實 instance 規模。}{}以 2026/05/20 為再平衡日（資料抽取於 2026-05-25 重跑全條 pipeline 後之最新交易日）的真實案例為：1{,}052 檔候選股、34 個產業、240 個歷史情境；其中 46 檔股票因「1 張價格已超過 $U V^0$」（如 2330 台積電、2454 聯發科、3008 大立光）被自動標為 lot-infeasible 並從 $z = 1$ 候選集排除（這是 proposal §10 列出的模型限制 (2)：高股價迫使部分股票無法以單張權重 $\leq U$ 形式持有）。上游候選股池涵蓋 2{,}323 檔（含產業分類，當期 \texttt{factors.parquet} 之 $\mu$ 均值 $0.173$、$\beta$ 均值 $0.440$），在 $\texttt{min\_market\_cap} \geq 5 \times 10^9$ 與 $\texttt{min\_history\_days} \geq 200$ 兩道篩選後得 1{,}052 檔。
 
-\textbf{介面契約（§7）。}{}所有跨模組資料以 parquet/JSON/CSV 三種固定格式交換：\texttt{prices}、\texttt{candidates}、\texttt{params} 三個 parquet 為上游；\texttt{ideal\_portfolio.json}（Stage 1 $\to$ Stage 2）與 \texttt{order\_sheet.csv}（Stage 2 $\to$ 回測 / 下單）為下游。schema 鎖死於開發起點，使 4 人組得以平行開發。
+\textbf{介面契約（§7）。}{}所有跨模組資料以 parquet/JSON/CSV 五種固定格式交換：上游 \texttt{prices.parquet}、\texttt{candidates.parquet}、\texttt{params.parquet}、\texttt{benchmark.parquet} 由 Module 1 (\texttt{src/data/}) 產出；\texttt{factors.parquet} 與 \texttt{scenarios.parquet} 由 Module 2 (\texttt{src/params/}) 在 \texttt{as\_of} 算齊 $(\mu_i, \beta_i, \ell_i, r_{i,s})$ 後寫入；\texttt{ideal\_portfolio.json}（Stage 1 $\to$ Stage 2）與 \texttt{order\_sheet.csv}（Stage 2 $\to$ 回測 / 下單）為下游。schema 鎖死於開發起點，使 4 人組得以平行開發。
 
 
 
@@ -306,11 +311,11 @@ $L_i^{\text{lot}}, U_i^{\text{lot}}$ 同時被 \emph{反向投影} 回 Stage 1 �
 
 \subsection{Stage 1 規模掃描（合成 instances + 真實 instance）}
 
-\Cref{tab:bench-sweep} 為在五個規模上（$N \in \{50, 200, 500, 1000, 1046\}$）的對照結果。三項觀察：
+\Cref{tab:bench-sweep} 為在五個規模上（$N \in \{50, 200, 500, 1000, 1052\}$）的對照結果。三項觀察：
 \begin{itemizeTight}
-    \item 我們的 greedy 啟發式相對 MILP 之 gap 始終在 \textbf{1.43\%–2.80\%} 之間，與 universe 規模無明顯關聯；
-    \item Top-$K$ 基準的 gap 隨 universe 規模放大而 \emph{單調增加}（7.92\% → 17.03\%），原因是 universe 越大、$\mu$ 前 $K$ 名以外的可換股越多、單純「按 $\mu$ 排序」漏掉的機會就越大。這正凸顯了「換股 / local search」這一步的價值；
-    \item MILP 求解時間從 $N=50$ 的 \textbf{0.14\,s} 線性成長到 $N=1046$ 的 \textbf{2.44\,s}（CBC 單核），完全在可實用範圍內。
+    \item 我們的 greedy 啟發式相對 MILP 之 gap 始終在 \textbf{0.93\%–1.56\%} 之間，與 universe 規模無明顯關聯；
+    \item Top-$K$ 基準的 gap 隨 universe 規模放大而 \emph{大致單調增加}（9.80\% → 15.05\%），原因是 universe 越大、$\mu$ 前 $K$ 名以外的可換股越多、單純「按 $\mu$ 排序」漏掉的機會就越大。這正凸顯了「換股 / local search」這一步的價值；
+    \item MILP 求解時間從 $N=50$ 的 \textbf{0.21\,s} 線性成長到 $N=1052$ 的 \textbf{2.19\,s}（CBC 單核），完全在可實用範圍內。
 \end{itemizeTight}
 
 \begin{table}[!hbt]
@@ -321,38 +326,38 @@ $L_i^{\text{lot}}, U_i^{\text{lot}}$ 同時被 \emph{反向投影} 回 Stage 1 �
 $N$ & $K$ & method & objective & gap (\%) & $\beta$ & CVaR & time (s) \\
 \midrule
 \multirow{3}{*}{50} & \multirow{3}{*}{15}
-   & MILP optimal      & 2.0740 & 0.00 & 1.100 & 0.0400 & 0.14 \\
-&  & greedy heuristic  & 2.0444 & 1.43 & 1.100 & 0.0387 & 6.57 \\
-&  & Top-$K$ baseline  & 1.9097 & 7.92 & 1.053 & 0.0400 & 0.00 \\
+   & MILP optimal      & 2.3074 & 0.00 & 0.874 & 0.0400 & 0.21 \\
+&  & greedy heuristic  & 2.2715 & 1.56 & 0.754 & 0.0400 & 3.59 \\
+&  & Top-$K$ baseline  & 2.0813 & 9.80 & 0.790 & 0.0399 & 0.01 \\
 \midrule
 \multirow{3}{*}{200} & \multirow{3}{*}{20}
-   & MILP optimal      & 2.0616 & 0.00 & 1.100 & 0.0400 & 0.42 \\
-&  & greedy heuristic  & 2.0225 & 1.90 & 1.096 & 0.0381 & 5.82 \\
-&  & Top-$K$ baseline  & 1.8214 & 11.65 & 1.099 & 0.0400 & 0.00 \\
+   & MILP optimal      & 2.3085 & 0.00 & 0.799 & 0.0400 & 0.50 \\
+&  & greedy heuristic  & 2.2869 & 0.93 & 0.837 & 0.0400 & 4.69 \\
+&  & Top-$K$ baseline  & 1.9966 & 13.51 & 0.709 & 0.0400 & 0.01 \\
 \midrule
 \multirow{3}{*}{500} & \multirow{3}{*}{20}
-   & MILP optimal      & 2.0616 & 0.00 & 1.100 & 0.0400 & 0.88 \\
-&  & greedy heuristic  & 2.0039 & 2.80 & 1.094 & 0.0398 & 5.20 \\
-&  & Top-$K$ baseline  & 1.8214 & 11.65 & 1.099 & 0.0400 & 0.00 \\
+   & MILP optimal      & 2.3085 & 0.00 & 0.799 & 0.0400 & 1.11 \\
+&  & greedy heuristic  & 2.2847 & 1.03 & 0.803 & 0.0400 & 6.01 \\
+&  & Top-$K$ baseline  & 1.9999 & 13.37 & 0.772 & 0.0400 & 0.01 \\
 \midrule
 \multirow{3}{*}{1000} & \multirow{3}{*}{20}
-   & MILP optimal      & 2.0616 & 0.00 & 1.100 & 0.0400 & 2.28 \\
-&  & greedy heuristic  & 2.0083 & 2.59 & 1.077 & 0.0400 & 7.00 \\
-&  & Top-$K$ baseline  & 1.7106 & 17.03 & 0.791 & 0.0399 & 0.00 \\
+   & MILP optimal      & 2.3085 & 0.00 & 0.799 & 0.0400 & 2.43 \\
+&  & greedy heuristic  & 2.2842 & 1.05 & 0.793 & 0.0400 & 4.93 \\
+&  & Top-$K$ baseline  & 1.9611 & 15.05 & 0.763 & 0.0399 & 0.01 \\
 \midrule
-\multirow{3}{*}{\textbf{1046}} & \multirow{3}{*}{\textbf{20}}
-   & MILP optimal      & \textbf{2.0616} & \textbf{0.00} & 1.100 & 0.0400 & \textbf{2.44} \\
-&  & greedy heuristic  & 2.0083 & 2.59 & 1.077 & 0.0400 & 7.16 \\
-&  & Top-$K$ baseline  & 1.7106 & 17.03 & 0.791 & 0.0399 & 0.00 \\
+\multirow{3}{*}{\textbf{1052}} & \multirow{3}{*}{\textbf{20}}
+   & MILP optimal      & \textbf{2.3085} & \textbf{0.00} & 0.799 & 0.0400 & \textbf{2.19} \\
+&  & greedy heuristic  & 2.2842 & 1.05 & 0.793 & 0.0400 & 4.92 \\
+&  & Top-$K$ baseline  & 1.9611 & 15.05 & 0.763 & 0.0399 & 0.01 \\
 \bottomrule
 \end{tabular}
-\caption{Stage 1 三種方法在不同規模 universe 上的 objective、gap、與時間（rebalance date = 2026/04/30、$|\Omega|=240$、CBC backend）。最後一列為真實 instance；其餘為 self-generated 子集合。}
+\caption{Stage 1 三種方法在不同規模 universe 上的 objective、gap、與時間（rebalance date = 2026/05/20、$|\Omega|=240$、CBC backend）。最後一列為真實 instance；其餘為 self-generated 子集合。}
 \label{tab:bench-sweep}
 \end{table}
 
 \subsection{Stage 2 整數張數落地 — 真實案例}
 
-在真實 instance 上跑 Stage 2（$V^0 = 10{,}000{,}000$ 元、$c_b=0.001425$、$c_s=0.004425$、$\lambda_{\text{trade}}=0.0005$），結果：求解狀態 Optimal、總 L1 偏離 $\sum d_i = \textbf{0.0177}$（即實際相對權重平均比理想多偏 0.09\%）、交易筆數 20（全買、無賣，因首期 $x^0 \equiv 0$）、剩餘現金 \textbf{8{,}432.28} 元（佔 $V^0$ 之 0.084\%）。\Cref{tab:order-sheet} 列出 order sheet 中偏離最大的五檔，做為「為什麼 Stage 2 不是純取整」的證據：偏離全部來自高股價股票無法在 $U V^0 = 1{,}000{,}000$ 元預算內塞滿、或低股價股票每張 / $V^0$ 的離散粒度過粗。
+在真實 instance 上跑 Stage 2（$V^0 = 10{,}000{,}000$ 元、$c_b=0.001425$、$c_s=0.004425$、$\lambda_{\text{trade}}=0.0005$），結果：求解狀態 Optimal、總 L1 偏離 $\sum d_i = \textbf{0.0366}$（即實際相對權重平均比理想多偏 0.18\%）、交易筆數 20（全買、無賣，因首期 $x^0 \equiv 0$）、剩餘現金 \textbf{23{,}804.15} 元（佔 $V^0$ 之 0.238\%）。20 檔中有 13 檔 $d_i \approx 0$、僅 7 檔因離散粒度而偏離。\Cref{tab:order-sheet} 列出 order sheet 中偏離最大的五檔，做為「為什麼 Stage 2 不是純取整」的證據：偏離全部來自高股價股票無法在 $U V^0 = 1{,}000{,}000$ 元預算內塞滿、或低股價股票每張 / $V^0$ 的離散粒度過粗。
 
 \begin{table}[!hbt]
 \centering
@@ -361,14 +366,15 @@ $N$ & $K$ & method & objective & gap (\%) & $\beta$ & CVaR & time (s) \\
 \toprule
 stock\_id & 每張價格 & 買數 & w\_actual & w\_ideal & deviation & 備註 \\
 \midrule
-6831 邁科     & 474{,}500 & 2 & 0.0949 & 0.0872 & +0.0077 & 一張 $\approx 4.7\% V^0$，無法精準對到 8.7\% \\
-7742 天弘化   & 194{,}000 & 4 & 0.0776 & 0.0826 & $-$0.0050 & 5 張會超過流動性上限 $\ell_i$ \\
-7781 昕力資*  &  30{,}550 & 23 & 0.0703 & 0.0736 & $-$0.0033 & 每張僅 0.31\%，張數已大 \\
-3555 博士旺   & 248{,}000 & 1 & 0.0248 & 0.0265 & $-$0.0017 & 一張 $\approx 2.48\% V^0$ \\
-其他 16 檔    & — & — & — & — & 0.0000 & 完全對齊理想權重 \\
+6727 亞泰金屬 & 496{,}500 & 2 & 0.0993 & 0.0829 & +0.0164 & 一張 $\approx 4.97\% V^0$，2 張即接近 $U$ 上限 \\
+6990 華鉬     & 138{,}000 & 4 & 0.0552 & 0.0623 & $-$0.0071 & 5 張會超過流動性上限 $\ell_i$ \\
+3054 立萬利   &  66{,}600 & 3 & 0.0200 & 0.0242 & $-$0.0042 & 每張 0.67\%，4 張會超過產業上限 \\
+4577 達航科技 & 118{,}000 & 1 & 0.0118 & 0.0153 & $-$0.0035 & 一張 $\approx 1.18\% V^0$ \\
+3555 博士旺   & 195{,}000 & 4 & 0.0780 & 0.0807 & $-$0.0027 & 一張 $\approx 1.95\% V^0$ \\
+其他 15 檔    & — & — & — & — & $\leq 0.003$ & 含 13 檔 $d_i \approx 0$ \\
 \bottomrule
 \end{tabular}
-\caption{Stage 2 偏離最大的 5 檔（按 $|d_i|$ 排序）；其餘 16 檔皆 $d_i = 0$。剩餘現金 8{,}432.28 元（0.084\%）。}
+\caption{Stage 2 偏離最大的 5 檔（按 $|d_i|$ 排序）；剩餘現金 23{,}804.15 元（0.238\%）。}
 \label{tab:order-sheet}
 \end{table}
 
@@ -376,10 +382,10 @@ stock\_id & 每張價格 & 買數 & w\_actual & w\_ideal & deviation & 備註 \\
 
 我們以實證結果直接回應 proposal §8 列出的五個研究問題：
 \begin{itemize}[leftmargin=2em]
-    \item \textbf{RQ1：受限最佳化是否優於 Top-$K$ 等權？} 是。在真實 instance 上 Stage 1 MILP 之 $\mu^\top w$ 比 Top-$K$ 高 \textbf{20.5\%}（2.0616 vs.\ 1.7106）；在 5 個規模上皆嚴格 dominate。
-    \item \textbf{RQ2：風險、產業與周轉限制是否提升穩定性？} 在 Stage 1 解中 $\beta = \beta^{\max} = 1.10$、CVaR $= \bar{C}^{\text{risk}} = 0.04$ 兩條限制均緊密 active，顯示模型在「報酬潛力」與「下檔風險」之間取得了上限邊界。
-    \item \textbf{RQ3：連續權重轉整數張數的偏離有多大？} 累積 $\sum_i d_i = 0.0177$（1.77\%）；20 檔中 16 檔完全對齊，僅 4 檔因離散粒度而偏離。
-    \item \textbf{RQ4：納入現金守恆與交易成本後是否仍能執行？} 是。剩餘現金 8{,}432 元（0.084\%）、$C \geq 0$ 始終成立。
+    \item \textbf{RQ1：受限最佳化是否優於 Top-$K$ 等權？} 是。在真實 instance 上 Stage 1 MILP 之 $\mu^\top w$ 比 Top-$K$ 高 \textbf{17.71\%}（2.3085 vs.\ 1.9611）；在 5 個規模上皆嚴格 dominate。
+    \item \textbf{RQ2：風險、產業與周轉限制是否提升穩定性？} 在 Stage 1 解中 CVaR $= \bar{C}^{\text{risk}} = 0.04$ 與 turnover $= \tau = 1.00$（首期 $w^0 \equiv 0$ 之結構性下限）兩條限制 active；組合 $\beta = 0.80$ 未觸頂於 $\beta^{\max} = 1.10$，顯示在當期動能驅動下，下檔風險與買進預算才是主導限制。
+    \item \textbf{RQ3：連續權重轉整數張數的偏離有多大？} 累積 $\sum_i d_i = 0.0366$（3.66\%）；20 檔中 13 檔完全對齊，僅 7 檔因離散粒度而偏離；最大單檔偏離 0.0164 來自一張價格約 50 萬的 6727 亞泰金屬。
+    \item \textbf{RQ4：納入現金守恆與交易成本後是否仍能執行？} 是。剩餘現金 23{,}804 元（0.238\%）、$C \geq 0$ 始終成立。
     \item \textbf{RQ5：兩階段相較單階段是否更貼近真實流程？} 是。Stage 2 處理了單階段連續權重模型完全忽略的「整數張數、現金守恆、買賣互斥、手續費」四項實務限制，從本研究 order sheet 可直接交付下單，而單階段模型的連續權重需要人工事後取整、容易引入二次偏離。
 \end{itemize}
 
@@ -389,7 +395,7 @@ stock\_id & 每張價格 & 買數 & w\_actual & w\_ideal & deviation & 備註 \\
 \section{Conclusions}
 \label{sec-conclusion}
 
-本研究將「主題型台股投資的再平衡決策」嚴格界定為兩個串接的 MILP 子問題，並以真實 TEJ 資料 + 自我生成的規模掃描 instance 雙軌驗證了系統。Stage 1 給出考慮 Beta／CVaR／產業集中度／周轉率／流動性的理想連續權重；Stage 2 再把它無縫落地成考慮整數張數、現金守恆與買賣互斥的可下單清單。我們另外提出一個多起點啟發式作為自有演算法，在 1{,}046 檔 universe 上之 optimality gap 為 \textbf{2.59\%}，相較 Top-$K$ 等權基準（gap 17.03\%）優異很多，且無需商用 solver、毫秒級即可給出可行解；於規模上探到 $N=1046$ 時 MILP 仍能在約 2.5 秒內解出最佳解，故啟發式在現階段不是必要、但作為 fallback 與更大規模延伸（如多期聯立）的基礎工具仍有價值。
+本研究將「主題型台股投資的再平衡決策」嚴格界定為兩個串接的 MILP 子問題，並以真實 TEJ 資料 + 自我生成的規模掃描 instance 雙軌驗證了系統。Stage 1 給出考慮 Beta／CVaR／產業集中度／周轉率／流動性的理想連續權重；Stage 2 再把它無縫落地成考慮整數張數、現金守恆與買賣互斥的可下單清單。我們另外提出一個多起點啟發式作為自有演算法，在 1{,}052 檔 universe 上之 optimality gap 為 \textbf{1.05\%}，相較 Top-$K$ 等權基準（gap 15.05\%）優異很多，且無需商用 solver、秒級即可給出可行解；於規模上探到 $N=1052$ 時 MILP 仍能在約 2.2 秒內解出最佳解，故啟發式在現階段不是必要、但作為 fallback 與更大規模延伸（如多期聯立）的基礎工具仍有價值。
 
 \textbf{後續工作。}{}本研究尚有以下可延伸方向（呼應 proposal §10）：
 \begin{itemizeTight}
