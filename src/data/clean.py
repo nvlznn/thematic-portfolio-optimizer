@@ -4,7 +4,7 @@ import pandas as pd
 def clean_daily_prices():
     print("[Module: clean.py] 啟動日頻率股價精準清洗流程...")
     raw_path = "data/raw/202105"
-    processed_path = "data/processed/202105"
+    processed_path = "data/processed"
     os.makedirs(processed_path, exist_ok=True)
     
     file_path = os.path.join(raw_path, "raw_prices.csv")
@@ -31,6 +31,21 @@ def clean_daily_prices():
     # 解析日期 (datetime64[ns])
     df['date'] = pd.to_datetime(df['date'].astype(str).str.split('.').str[0], format="%Y%m%d", errors='coerce')
     
+    # ==========================================
+    # ✨ 核心新增：獨立攔截大盤指數給組員 B
+    # ==========================================
+    df_market = df[df['stock_id'] == 'Y9999'].copy()
+    if not df_market.empty:
+        df_market['close'] = pd.to_numeric(df_market['close'], errors='coerce')
+        df_market.dropna(subset=['date', 'close'], inplace=True)
+        # 大盤不需要量能，只需要日期與收盤價
+        df_market = df_market[['date', 'stock_id', 'close']]
+        df_market.sort_values('date', inplace=True)
+        df_market.to_parquet(os.path.join(processed_path, "benchmark.parquet"), index=False)
+        print(f"專屬大盤資料 benchmark.parquet 獨立匯出成功！(供組員 B 算 Beta 使用)")
+    # ==========================================
+
+    # 排除大盤指數與無效日期 (這包是給 C 跟 D 的純個股資料)
     df = df[df['stock_id'] != 'Y9999'].copy()
     df.dropna(subset=['date'], inplace=True)
     
