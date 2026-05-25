@@ -290,9 +290,9 @@ $L_i^{\text{lot}}, U_i^{\text{lot}}$ 同時被 \emph{反向投影} 回 Stage 1 �
     \item \textbf{$w_i^0$（期初權重）}：首期由設定檔指定（預設全 0、即「全現金起跑」）；rolling 回測時由上一期 Stage 2 輸出之 $x_i, C$ 反推。
 \end{itemizeTight}
 
-\textbf{Self-generated instances。}{}在進行規模掃描效能評估時（\cref{sec-eval}），我們以「$\mu$ 前 $N$ 名子集合」的方式產生 $N \in \{50, 100, 200, 500\}$ 共四個合成 instance，並覆寫 $K$；每個 instance 的 $\beta, \ell, r_{i,s}$ 等其他參數與真實 instance 一致，藉此檢驗演算法在不同 universe 規模下的 gap 與時間表現。
+\textbf{Self-generated instances。}{}在進行規模掃描效能評估時（\cref{sec-eval}），我們以「$\mu$ 前 $N$ 名子集合」的方式產生 $N \in \{50, 200, 500, 1000\}$ 共四個合成 instance，並覆寫 $K$；每個 instance 的 $\beta, \ell, r_{i,s}$ 等其他參數與真實 instance 一致，藉此檢驗演算法在不同 universe 規模下的 gap 與時間表現。
 
-\textbf{真實 instance 規模。}{}以 2026/04/30 為再平衡日的真實案例為：1{,}046 檔候選股、34 個產業、240 個歷史情境；其中 49 檔股票因「1 張價格已超過 $U V^0$」（如 2330 台積電、2454 聯發科、3008 大立光）被自動標為 lot-infeasible 並從 $z = 1$ 候選集排除（這是 proposal §10 列出的模型限制 (2)：高股價迫使部分股票無法以單張權重 $\leq U$ 形式持有）。
+\textbf{真實 instance 規模。}{}以 2026/04/30 為再平衡日的真實案例為：1{,}046 檔候選股、34 個產業、240 個歷史情境；其中 49 檔股票因「1 張價格已超過 $U V^0$」（如 2330 台積電、2454 聯發科、3008 大立光）被自動標為 lot-infeasible 並從 $z = 1$ 候選集排除（這是 proposal §10 列出的模型限制 (2)：高股價迫使部分股票無法以單張權重 $\leq U$ 形式持有）。本報告所用之 parquet 介面檔於 2026-05-25 重新從 TEJ 拉取並重跑整條 pipeline——上游候選股池雖擴大為 2{,}318 檔（含產業分類），但在 $\texttt{min\_market\_cap} \geq 5 \times 10^9$ 與 $\texttt{min\_history\_days} \geq 200$ 兩道篩選後仍落在 1{,}046 檔，故報酬／風險指標與前次運行一致。
 
 \textbf{介面契約（§7）。}{}所有跨模組資料以 parquet/JSON/CSV 三種固定格式交換：\texttt{prices}、\texttt{candidates}、\texttt{params} 三個 parquet 為上游；\texttt{ideal\_portfolio.json}（Stage 1 $\to$ Stage 2）與 \texttt{order\_sheet.csv}（Stage 2 $\to$ 回測 / 下單）為下游。schema 鎖死於開發起點，使 4 人組得以平行開發。
 
@@ -306,11 +306,11 @@ $L_i^{\text{lot}}, U_i^{\text{lot}}$ 同時被 \emph{反向投影} 回 Stage 1 �
 
 \subsection{Stage 1 規模掃描（合成 instances + 真實 instance）}
 
-\Cref{tab:bench-sweep} 為在五個規模上（$N \in \{50, 100, 200, 500, 1046\}$）的對照結果。三項觀察：
+\Cref{tab:bench-sweep} 為在五個規模上（$N \in \{50, 200, 500, 1000, 1046\}$）的對照結果。三項觀察：
 \begin{itemizeTight}
     \item 我們的 greedy 啟發式相對 MILP 之 gap 始終在 \textbf{1.43\%–2.80\%} 之間，與 universe 規模無明顯關聯；
     \item Top-$K$ 基準的 gap 隨 universe 規模放大而 \emph{單調增加}（7.92\% → 17.03\%），原因是 universe 越大、$\mu$ 前 $K$ 名以外的可換股越多、單純「按 $\mu$ 排序」漏掉的機會就越大。這正凸顯了「換股 / local search」這一步的價值；
-    \item MILP 求解時間從 $N=50$ 的 \textbf{0.10\,s} 線性成長到 $N=1046$ 的 \textbf{2.56\,s}（CBC 單核），完全在可實用範圍內。
+    \item MILP 求解時間從 $N=50$ 的 \textbf{0.14\,s} 線性成長到 $N=1046$ 的 \textbf{2.44\,s}（CBC 單核），完全在可實用範圍內。
 \end{itemizeTight}
 
 \begin{table}[!hbt]
@@ -321,28 +321,28 @@ $L_i^{\text{lot}}, U_i^{\text{lot}}$ 同時被 \emph{反向投影} 回 Stage 1 �
 $N$ & $K$ & method & objective & gap (\%) & $\beta$ & CVaR & time (s) \\
 \midrule
 \multirow{3}{*}{50} & \multirow{3}{*}{15}
-   & MILP optimal      & 2.0740 & 0.00 & 1.100 & 0.0400 & 0.10 \\
-&  & greedy heuristic  & 2.0444 & 1.43 & 1.100 & 0.0387 & 6.10 \\
+   & MILP optimal      & 2.0740 & 0.00 & 1.100 & 0.0400 & 0.14 \\
+&  & greedy heuristic  & 2.0444 & 1.43 & 1.100 & 0.0387 & 6.57 \\
 &  & Top-$K$ baseline  & 1.9097 & 7.92 & 1.053 & 0.0400 & 0.00 \\
 \midrule
-\multirow{3}{*}{100} & \multirow{3}{*}{15}
-   & MILP optimal      & 2.0740 & 0.00 & 1.100 & 0.0400 & 0.20 \\
-&  & greedy heuristic  & 2.0190 & 2.65 & 1.100 & 0.0387 & 5.40 \\
-&  & Top-$K$ baseline  & 1.8870 & 9.02 & 1.077 & 0.0400 & 0.00 \\
-\midrule
 \multirow{3}{*}{200} & \multirow{3}{*}{20}
-   & MILP optimal      & 2.0616 & 0.00 & 1.100 & 0.0400 & 0.36 \\
-&  & greedy heuristic  & 2.0225 & 1.90 & 1.096 & 0.0381 & 5.62 \\
+   & MILP optimal      & 2.0616 & 0.00 & 1.100 & 0.0400 & 0.42 \\
+&  & greedy heuristic  & 2.0225 & 1.90 & 1.096 & 0.0381 & 5.82 \\
 &  & Top-$K$ baseline  & 1.8214 & 11.65 & 1.099 & 0.0400 & 0.00 \\
 \midrule
 \multirow{3}{*}{500} & \multirow{3}{*}{20}
-   & MILP optimal      & 2.0616 & 0.00 & 1.100 & 0.0400 & 0.80 \\
-&  & greedy heuristic  & 2.0039 & 2.80 & 1.094 & 0.0398 & 5.08 \\
+   & MILP optimal      & 2.0616 & 0.00 & 1.100 & 0.0400 & 0.88 \\
+&  & greedy heuristic  & 2.0039 & 2.80 & 1.094 & 0.0398 & 5.20 \\
 &  & Top-$K$ baseline  & 1.8214 & 11.65 & 1.099 & 0.0400 & 0.00 \\
 \midrule
+\multirow{3}{*}{1000} & \multirow{3}{*}{20}
+   & MILP optimal      & 2.0616 & 0.00 & 1.100 & 0.0400 & 2.28 \\
+&  & greedy heuristic  & 2.0083 & 2.59 & 1.077 & 0.0400 & 7.00 \\
+&  & Top-$K$ baseline  & 1.7106 & 17.03 & 0.791 & 0.0399 & 0.00 \\
+\midrule
 \multirow{3}{*}{\textbf{1046}} & \multirow{3}{*}{\textbf{20}}
-   & MILP optimal      & \textbf{2.0616} & \textbf{0.00} & 1.100 & 0.0400 & \textbf{2.56} \\
-&  & greedy heuristic  & 2.0083 & 2.59 & 1.077 & 0.0400 & 7.04 \\
+   & MILP optimal      & \textbf{2.0616} & \textbf{0.00} & 1.100 & 0.0400 & \textbf{2.44} \\
+&  & greedy heuristic  & 2.0083 & 2.59 & 1.077 & 0.0400 & 7.16 \\
 &  & Top-$K$ baseline  & 1.7106 & 17.03 & 0.791 & 0.0399 & 0.00 \\
 \bottomrule
 \end{tabular}

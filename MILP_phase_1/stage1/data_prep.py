@@ -54,6 +54,12 @@ def _decode_dates(series: pd.Series) -> pd.Series:
     return pd.to_datetime(series)
 
 
+def _normalize_stock_id(series: pd.Series) -> pd.Series:
+    """部分 parquet 的 stock_id 是 "CODE 中文名" 形式（candidates、params），
+    prices 則是純 "CODE"。統一切到第一個空白前的代碼，讓三檔可以 join。"""
+    return series.astype(str).str.split(n=1).str[0]
+
+
 def load_raw(processed_dir: str | Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     p = Path(processed_dir)
     prices = pd.read_parquet(p / "prices.parquet")
@@ -61,6 +67,13 @@ def load_raw(processed_dir: str | Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.
     params = pd.read_parquet(p / "params.parquet")
     prices["date"] = _decode_dates(prices["date"])
     params["date"] = _decode_dates(params["date"])
+    prices["stock_id"] = _normalize_stock_id(prices["stock_id"])
+    cands["stock_id"] = _normalize_stock_id(cands["stock_id"])
+    params["stock_id"] = _normalize_stock_id(params["stock_id"])
+    # 新版 parquet 把 beta_3m / roe / revenue_growth 寫成字串（StringDtype），這裡強制轉成 float
+    for col in ("beta_3m", "roe", "revenue_growth"):
+        if col in params.columns and not pd.api.types.is_numeric_dtype(params[col]):
+            params[col] = pd.to_numeric(params[col], errors="coerce")
     return prices, cands, params
 
 
