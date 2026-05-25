@@ -1,0 +1,48 @@
+{
+  "as_of": "2026-04-30",
+  "n_universe": 997,
+  "n_scenarios": 240,
+  "K": 20,
+  "results": [
+    {
+      "method": "MILP optimal",
+      "status": "Optimal",
+      "feasible": true,
+      "objective": 2.0615674408797124,
+      "gap_pct": 0.0,
+      "beta": 1.0999999995751,
+      "cvar": 0.0399999999992356,
+      "turnover": 1.0,
+      "n_holdings": 20,
+      "runtime_sec": 2.277919916999963,
+      "violations": []
+    },
+    {
+      "method": "greedy heuristic",
+      "status": "Feasible",
+      "feasible": true,
+      "objective": 2.00825607926241,
+      "gap_pct": 2.5859625331759033,
+      "beta": 1.077245099412344,
+      "cvar": 0.039992751437038884,
+      "turnover": 1.0,
+      "n_holdings": 20,
+      "runtime_sec": 7.000586124999245,
+      "violations": []
+    },
+    {
+      "method": "Top-K baseline",
+      "status": "Feasible",
+      "feasible": true,
+      "objective": 1.710564337608489,
+      "gap_pct": 17.026030597448873,
+      "beta": 0.7909778724563106,
+      "cvar": 0.039875261236740754,
+      "turnover": 0.9999999999999999,
+      "n_holdings": 20,
+      "runtime_sec": 0.0032824590016389266,
+      "violations": []
+    }
+  ],
+  "heuristic_beats_topk": true
+}
