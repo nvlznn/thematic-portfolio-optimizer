@@ -88,7 +88,7 @@ Final Project Report \\[4pt]
     \item \emph{交易成本 vs.\ 周轉}：頻繁調倉抓信號代價是手續費與滑價；過低的周轉率限制 $\tau$ 又會讓組合難以反應新觀點。
 \end{itemizeTight}
 
-\textbf{為什麼這是 OR 問題。}{}上述每一個權衡都對應到一條（或一組）線性限制式，且決策變數天然包含連續權重與整數張數；對應的最佳化問題剛好落在 MILP 的標準型範圍內，並且能用 Gurobi / CBC 等求解器處理。我們因此設計兩個獨立但耦合的最佳化模型——Stage 1 解策略層面（理想權重），Stage 2 解執行層面（張數＋現金）——並以歷史回測驗證其相較簡化策略（Top-$K$ 等權、僅 Stage 1 連續權重）的優勢。
+\textbf{為什麼這是 OR 問題。}{}上述每個權衡都對應到一條（或一組）線性限制式，決策變數天然含連續權重與整數張數，整個問題剛好落在 MILP 標準型內、可由 Gurobi／CBC 求解。我們因此設計兩個獨立但耦合的模型——Stage 1 解策略層（理想權重）、Stage 2 解執行層（張數＋現金）——並以基準對照驗證其相較簡化策略（Top-$K$ 等權、僅 Stage 1 連續權重）的優勢。
 
 
 
@@ -121,14 +121,11 @@ Final Project Report \\[4pt]
 \toprule
 原本需人工處理之事項 & 本研究之系統化處理方式 \\
 \midrule
-挑選符合主題且具投資可行性之股票 & 依主題分類、市值、成交值與資料完整性建立候選股池 \\
-比較個股投資吸引力 & 自動計算動能分數、營收成長分數或其他可量化 score \\
-檢查投資組合是否過度集中於單一產業 & 將產業權重集中度納入最佳化限制式 \\
-控制市場風險與極端下跌風險 & 加入 Beta 上限與 CVaR 下檔風險限制 \\
-避免過度調倉與頻繁換股 & 加入周轉率限制，並於交易落地層追蹤實際買賣標的 \\
-將理想權重轉成可實際下單的張數 & 以整數變數決定買入、賣出與最終持股張數 \\
-檢查現金是否足夠交割 & 以現金守恆方程式確保交易後現金非負 \\
-產生可執行之調倉清單 & 輸出 order sheet：買入張數、賣出張數與最終現金餘額 \\
+挑選符合主題且可投資之股票、比較投資吸引力 & 依主題／市值／成交值／資料完整性建池，並自動計算動能或營收成長等可量化 score \\
+控制投資組合的產業集中度 & 將產業權重上限納入最佳化限制式 \\
+控制市場與極端下跌風險、避免過度換股 & 加入 Beta 上限、CVaR 下檔風險與周轉率限制 \\
+將理想權重轉成可下單張數、確保現金足夠交割 & 以整數變數決定買／賣／最終持股張數，並以現金守恆方程式保證交易後現金非負 \\
+產生可執行之調倉清單 & 輸出 order sheet：買入／賣出張數與最終現金餘額 \\
 \bottomrule
 \end{tabular}
 \caption{人工流程與本研究系統化處理方式}
@@ -295,11 +292,31 @@ $L_i^{\text{lot}}, U_i^{\text{lot}}$ 同時被 \emph{反向投影} 回 Stage 1 �
     \item \textbf{$w_i^0$（期初權重）}：首期由設定檔指定（預設全 0、即「全現金起跑」）；rolling 回測時由上一期 Stage 2 輸出之 $x_i, C$ 反推。
 \end{itemizeTight}
 
-\textbf{Self-generated instances。}{}在進行規模掃描效能評估時（\cref{sec-eval}），我們以「$\mu$ 前 $N$ 名子集合」的方式產生 $N \in \{50, 200, 500, 1000\}$ 共四個合成 instance，並覆寫 $K$；每個 instance 的 $\beta, \ell, r_{i,s}$ 等其他參數與真實 instance 一致，藉此檢驗演算法在不同 universe 規模下的 gap 與時間表現。
+\textbf{規模掃描子集（real-data subsets）。}{}為觀察演算法在不同 universe 規模下的 gap 與時間表現，我們以「$\mu$ 前 $N$ 名子集合」由真實 instance 切出 $N \in \{50, 200, 500, 1000\}$ 共四個子集（並覆寫 $K$）；每個子集的 $\beta, \ell, r_{i,s}$ 等其他參數與真實 instance 一致。這些屬於「真實資料的縮放」，用於 \cref{sec-eval} 的規模敏感度分析（\cref{tab:bench-sweep}）。
+
+\textbf{Self-generated instances — 27 個結構化合成實例。}{}為符合作業 §5「self-generated instances 為必需」、並系統性檢驗演算法在「真實快照永遠落在可行域內」之外的各種市場結構下之行為，我們另外以一套 10 因子實驗設計（DoE）生成 27 個\emph{完全合成}的 instance（程式碼置於 \texttt{synthetic\_data/}）。十個因子涵蓋：universe 規模 $|I|\in\{20,50,100\}$、情境數 $|\Omega|\in\{100,250,500\}$、產業形狀（balanced／concentrated）、報酬分佈（Gaussian／$t(\nu{=}5)$／block-bootstrap）、相關結構（independent／block／factor）、$\beta$ 分佈（tight／wide）、$\mu$–$\beta$ 相關（$0$／$\pm0.5$）、價格分佈（uniform／log-normal，後者刻意觸發 lot-infeasibility）、期初持有（cold／warm）、與壓力組合（normal／tight CVaR／tight industry／infeasibility trap）。所有非變因鎖在中心格 baseline，各子集以 OFAT（one-factor-at-a-time）方式單變一因子，便於在報告中逐列解釋；五個子集 S1–S5 共 27 個 instance（\cref{tab:synth-doe}）。價格以單因子 GBM 模擬、$\beta$ 以兩階段「先抽目標 $\beta$ 再餵入模擬器當 loading」構造、$\mu$ 經 Cholesky 與 $\beta$ 耦合以實現 F7；RNG 以 \texttt{numpy.SeedSequence.spawn()} 為各生成模組獨立散播，確保「同 seed $\to$ 四個 parquet 之 bytes 完全相同」（25 個 pytest 驗證）。合成 instance 與真實 pipeline \emph{共用同一套 Stage 1／Stage 2 程式碼}，僅在 \texttt{params.parquet} 增一個 additive 的 \texttt{mu\_override} 欄、不更動任何 \texttt{MILP\_phase\_*} 模型檔。三層驗證（schema $\to$ economic $\to$ feasibility）結果為 \textbf{24 OK\_FEASIBLE / 3 OK\_RELAXED}（後者全部落在 S4 壓力子集），27 個 instance 全於 $0.23$\,s 內解出。
+
+\begin{table}[!hbt]
+\centering
+\small
+\begin{tabular}{l r p{0.44\textwidth} p{0.18\textwidth}}
+\toprule
+子集 & $n$ & 變因（factor $\times$ levels） & 目的 \\
+\midrule
+S1 規模掃描   & 9 & $|I|\times|\Omega| = \{20,50,100\}\times\{100,250,500\}$ & runtime vs 規模 \\
+S2 分佈壓力   & 6 & $\{t,\text{bootstrap}\}\times\{$indep, block, factor$\}$ & 尾部／相關結構 \\
+S3 約束壓力   & 5 & wide $\beta$／$\mu$-$\beta=\pm0.5$／集中產業／log-normal 價 & 單一限制 binding \\
+S4 不可行陷阱 & 4 & normal／tight CVaR$(0.008)$／tight industry／infeas trap & relaxation 路徑 \\
+S5 Warm-start & 3 & S1 對角三格翻 warm（$w^0\neq0$） & turnover binding \\
+\bottomrule
+\end{tabular}
+\caption{自生成合成實例組之 DoE：5 個子集、共 27 個 instance。中心格 baseline 為 $|I|=50,\,|\Omega|=250$、5 balanced 產業、Gaussian、block 相關、tight $\beta$、無 $\mu$-$\beta$ 相關、uniform 價、cold start、normal caps。}
+\label{tab:synth-doe}
+\end{table}
 
 \textbf{真實 instance 規模。}{}以 2026/05/20 為再平衡日（資料抽取於 2026-05-25 重跑全條 pipeline 後之最新交易日）的真實案例為：1{,}052 檔候選股、34 個產業、240 個歷史情境；其中 46 檔股票因「1 張價格已超過 $U V^0$」（如 2330 台積電、2454 聯發科、3008 大立光）被自動標為 lot-infeasible 並從 $z = 1$ 候選集排除（這是 proposal §10 列出的模型限制 (2)：高股價迫使部分股票無法以單張權重 $\leq U$ 形式持有）。上游候選股池涵蓋 2{,}323 檔（含產業分類，當期 \texttt{factors.parquet} 之 $\mu$ 均值 $0.173$、$\beta$ 均值 $0.440$），在 $\texttt{min\_market\_cap} \geq 5 \times 10^9$ 與 $\texttt{min\_history\_days} \geq 200$ 兩道篩選後得 1{,}052 檔。
 
-\textbf{介面契約（§7）。}{}所有跨模組資料以 parquet/JSON/CSV 五種固定格式交換：上游 \texttt{prices.parquet}、\texttt{candidates.parquet}、\texttt{params.parquet}、\texttt{benchmark.parquet} 由 Module 1 (\texttt{src/data/}) 產出；\texttt{factors.parquet} 與 \texttt{scenarios.parquet} 由 Module 2 (\texttt{src/params/}) 在 \texttt{as\_of} 算齊 $(\mu_i, \beta_i, \ell_i, r_{i,s})$ 後寫入；\texttt{ideal\_portfolio.json}（Stage 1 $\to$ Stage 2）與 \texttt{order\_sheet.csv}（Stage 2 $\to$ 回測 / 下單）為下游。schema 鎖死於開發起點，使 4 人組得以平行開發。
+\textbf{介面契約（§7）。}{}所有跨模組資料以固定 schema 的 parquet／JSON／CSV 交換：上游 \texttt{prices/candidates/params/benchmark.parquet}（Module 1）、中游 \texttt{factors/scenarios.parquet}（Module 2 於 \texttt{as\_of} 算齊 $(\mu_i,\beta_i,\ell_i,r_{i,s})$）、下游 \texttt{ideal\_portfolio.json}（Stage 1$\to$2）與 \texttt{order\_sheet.csv}（Stage 2$\to$回測／下單）。schema 鎖死於開發起點，使 4 人組得以平行開發。
 
 
 
@@ -355,9 +372,38 @@ $N$ & $K$ & method & objective & gap (\%) & $\beta$ & CVaR & time (s) \\
 \label{tab:bench-sweep}
 \end{table}
 
+\subsection{Stage 1 合成實例 DoE 對照（27 個 self-generated instance）}
+
+\Cref{tab:synth-bench} 為四種方法（MILP optimal、greedy heuristic、Top-$K$ baseline）在 27 個合成 instance 上、依五個子集平均的 optimality gap。三項結論：
+\begin{itemizeTight}
+    \item 在常規可行的子集（S1–S3）上，greedy heuristic 幾乎完全貼合 MILP 最佳解（平均 gap $\approx 0.00\%$），Top-$K$ 落後 $0.3\%$–$1.6\%$；全 27 個 instance 中 heuristic \textbf{擊敗 Top-$K$ 達 26/27}（唯一例外為 small-universe $+$ warm-start 的邊角案例 SYN\_025）。
+    \item S4「不可行陷阱」子集 heuristic 與 Top-$K$ 均出現約 $32\%$ 的大 gap——因為 MILP 透過 relaxation fallback 跳出原始模型才求得解，而我們的 heuristic 受限於\emph{原始}約束、不含放寬機制；此對比正好凸顯兩者的設計權衡。
+    \item S5「warm-start」子集 heuristic 平均略\emph{勝} MILP（$-2.50\%$）：某些 seed 下 turnover 限制未綁定，heuristic 在較自由的解空間找到更高目標，而 MILP 在 \texttt{mip\_gap} 容忍下提前停止。
+\end{itemizeTight}
+
+\begin{table}[!hbt]
+\centering
+\small
+\begin{tabular}{l r r r r}
+\toprule
+子集 & $n$ & mean opt.\ obj & heuristic gap & Top-$K$ gap \\
+\midrule
+S1 規模掃描   & 9 & 1.18 & 0.00\% & 0.42\% \\
+S2 分佈壓力   & 6 & 1.32 & 0.00\% & 0.28\% \\
+S3 約束壓力   & 5 & 1.21 & 0.00\% & 1.61\% \\
+S4 不可行陷阱 & 4 & 1.30 & 31.87\% & 31.97\% \\
+S5 Warm-start & 3 & 1.14 & $-2.50\%$ & $-4.30\%$ \\
+\bottomrule
+\end{tabular}
+\caption{四方法在 27 個合成 instance 上之平均 optimality gap（相對 MILP optimal）。S4 之大 gap 來自 MILP 經 relaxation 跳出原模型；S5 之負 gap 來自部分 seed 下 turnover 未綁定。Heuristic 全體擊敗 Top-$K$：26/27。}
+\label{tab:synth-bench}
+\end{table}
+
+\textbf{Relaxation fallback 實證。}{}真實 instance 從未觸發放寬（其 active constraints 僅 CVaR 與 turnover），合成 instance 的 S4 子集則正面驗證了 \cref{sec-model} 設計的逐步放寬：SYN\_022（tight CVaR $=0.008$）之 \texttt{relaxation\_log} 為 \texttt{[cvar]}；SYN\_023（tight industry）與 SYN\_024（infeasibility trap）皆完整走過 \texttt{[cvar $\to$ turnover $\to$ beta $\to$ industry]}。這證明 \cref{sec-model} 的「\texttt{cvar $\to$ turnover $\to$ beta $\to$ industry}」放寬順序按設計運作，且僅在原模型不可行時才啟動。
+
 \subsection{Stage 2 整數張數落地 — 真實案例}
 
-在真實 instance 上跑 Stage 2（$V^0 = 10{,}000{,}000$ 元、$c_b=0.001425$、$c_s=0.004425$、$\lambda_{\text{trade}}=0.0005$），結果：求解狀態 Optimal、總 L1 偏離 $\sum d_i = \textbf{0.0366}$（即實際相對權重平均比理想多偏 0.18\%）、交易筆數 20（全買、無賣，因首期 $x^0 \equiv 0$）、剩餘現金 \textbf{23{,}804.15} 元（佔 $V^0$ 之 0.238\%）。20 檔中有 13 檔 $d_i \approx 0$、僅 7 檔因離散粒度而偏離。\Cref{tab:order-sheet} 列出 order sheet 中偏離最大的五檔，做為「為什麼 Stage 2 不是純取整」的證據：偏離全部來自高股價股票無法在 $U V^0 = 1{,}000{,}000$ 元預算內塞滿、或低股價股票每張 / $V^0$ 的離散粒度過粗。
+在真實 instance 上跑 Stage 2（$V^0 = 10{,}000{,}000$ 元、$c_b=0.001425$、$c_s=0.004425$、$\lambda_{\text{trade}}=0.0005$），以部署的 Stage 1 解 \texttt{ideal\_portfolio.json}（目標 $2.3079$、$\beta=0.84$，與 \cref{tab:bench-sweep} 之嚴格最佳上界 $2.3085$ 相差 $<0.03\%$）為輸入。結果：求解狀態 Optimal、總 L1 偏離 $\sum d_i = \textbf{0.0366}$（即實際相對權重平均比理想多偏 0.18\%）、交易筆數 20（全買、無賣，因首期 $x^0 \equiv 0$）、剩餘現金 \textbf{23{,}804.15} 元（佔 $V^0$ 之 0.238\%）。20 檔中有 13 檔 $d_i \approx 0$、僅 7 檔因離散粒度而偏離。\Cref{tab:order-sheet} 列出 order sheet 中偏離最大的五檔，做為「為什麼 Stage 2 不是純取整」的證據：偏離全部來自高股價股票無法在 $U V^0 = 1{,}000{,}000$ 元預算內塞滿、或低股價股票每張 / $V^0$ 的離散粒度過粗。
 
 \begin{table}[!hbt]
 \centering
@@ -383,7 +429,7 @@ stock\_id & 每張價格 & 買數 & w\_actual & w\_ideal & deviation & 備註 \\
 我們以實證結果直接回應 proposal §8 列出的五個研究問題：
 \begin{itemize}[leftmargin=2em]
     \item \textbf{RQ1：受限最佳化是否優於 Top-$K$ 等權？} 是。在真實 instance 上 Stage 1 MILP 之 $\mu^\top w$ 比 Top-$K$ 高 \textbf{17.71\%}（2.3085 vs.\ 1.9611）；在 5 個規模上皆嚴格 dominate。
-    \item \textbf{RQ2：風險、產業與周轉限制是否提升穩定性？} 在 Stage 1 解中 CVaR $= \bar{C}^{\text{risk}} = 0.04$ 與 turnover $= \tau = 1.00$（首期 $w^0 \equiv 0$ 之結構性下限）兩條限制 active；組合 $\beta = 0.80$ 未觸頂於 $\beta^{\max} = 1.10$，顯示在當期動能驅動下，下檔風險與買進預算才是主導限制。
+    \item \textbf{RQ2：風險、產業與周轉限制是否提升穩定性？} 在部署的 Stage 1 解中 CVaR $= \bar{C}^{\text{risk}} = 0.04$ 與 turnover $= \tau = 1.00$（首期 $w^0 \equiv 0$ 之結構性下限）兩條限制 active；組合 $\beta = 0.84$ 未觸頂於 $\beta^{\max} = 1.10$，顯示在當期動能驅動下，下檔風險與買進預算才是主導限制。
     \item \textbf{RQ3：連續權重轉整數張數的偏離有多大？} 累積 $\sum_i d_i = 0.0366$（3.66\%）；20 檔中 13 檔完全對齊，僅 7 檔因離散粒度而偏離；最大單檔偏離 0.0164 來自一張價格約 50 萬的 6727 亞泰金屬。
     \item \textbf{RQ4：納入現金守恆與交易成本後是否仍能執行？} 是。剩餘現金 23{,}804 元（0.238\%）、$C \geq 0$ 始終成立。
     \item \textbf{RQ5：兩階段相較單階段是否更貼近真實流程？} 是。Stage 2 處理了單階段連續權重模型完全忽略的「整數張數、現金守恆、買賣互斥、手續費」四項實務限制，從本研究 order sheet 可直接交付下單，而單階段模型的連續權重需要人工事後取整、容易引入二次偏離。
