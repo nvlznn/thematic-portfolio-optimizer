@@ -4,7 +4,10 @@
 \usepackage{fontspec}
 \usepackage[BoldFont, SlantFont]{xeCJK}
 % 將下行字型換成系統中實際存在的中文字型，例如：PingFang TC / Heiti TC / 新細明體
-\setCJKmainfont{PingFang TC}
+\setCJKmainfont{Microsoft JhengHei}
+
+
+\usepackage{amssymb}        % 保險，CVaR 等若用到額外數學符號
 
 % --- 與 TA 範本一致的套件 ---
 \usepackage{amsfonts}
@@ -233,42 +236,67 @@ $L_i^{\text{lot}}, U_i^{\text{lot}}$ 同時被 \emph{反向投影} 回 Stage 1 �
 \section{Algorithms}
 \label{sec-algo}
 
-依作業要求 §5.4 「自創演算法為必需」，我們設計一個 \textbf{多起點啟發式}（greedy + water-filling + repair + 1-swap local search）。該演算法完全不呼叫 MILP solver，可在毫秒至數秒內給出可行解，並作為 MILP solver 不可用或 universe 過大時的後援。它由四個子程序組成：
+Stage 1 提供兩個啟發式：\textbf{Top-K}（下界基準）與 \textbf{Greedy}（多起點局部搜尋）。兩者共用四個子程序——\textsc{Allocate}（water-filling 配權）、\textsc{Repair}（Beta／CVaR 修復）、\textsc{Diversify}（產業集中度換股）、\textsc{LocalSearch}（1-swap 目標改善）。預處理先計算每檔上限 $\mathit{cap}_i=\min(U_i,\ell_i)$、下限 $\mathit{floor}_i=L_i$，並篩出可選股集合。
 
-\textbf{(1) 貪婪選股（greedy select）}：依 $\mu_i$ 由高到低排序，逐檔加入持股集合 $S$；每加入一檔即檢查「加入後該產業的最低權重 $\sum_{i \in S \cap S_j} L_i$」是否超過 $\gamma_j$，避免產業集中度於建構期就違反。若守衛條件太嚴使 $|S| < K$，純按 $\mu$ 補齊。
+\textbf{\textsc{Allocate}（water-filling）。}{} 給定持股集合 $S$，先把每檔灌到 $\mathit{floor}_i$ 形成底量；剩餘預算 $1-\sum_{i\in S}\mathit{floor}_i$ 依 $\mu$ 由高到低逐檔分配，受限於 $\mathit{cap}_i$、產業剩餘容量 $\gamma_j-\sum_{i\in S\cap S_j}w_i$ 與殘餘預算。此步保證 Budget、Cardinality、Box、Liquidity、Industry 滿足，Beta 與 CVaR 則交由 \textsc{Repair}。
 
-\textbf{(2) Water-filling 配權}：給定 $S$，先把每檔灌到 $L_i$ 形成「底量」；剩餘預算 $1 - \sum_{i \in S} L_i$ 由 $\mu$ 最高者起逐檔分配，但同時受限於 $\min(U_i, \ell_i)$、產業剩餘容量 $\gamma_j - \sum_{i \in S \cap S_j} w_i$、單期殘餘預算。本步驟保證 Budget、Cardinality、Box、Liquidity、Industry 等限制式被滿足，但 Beta 與 CVaR 仍可能違反。
+\textbf{\textsc{Repair}（Beta／CVaR）。}{} 若 $\beta^\top w>\beta^{\max}$ 或 $\mathrm{CVaR}>\bar{C}^{\text{risk}}$，計算每檔的風險分數（被違反的限制以上限正規化後相加），將權重自分數最高且 $w_i>\mathit{floor}_i$ 的捐贈者搬向分數最低的接收者；若搬不動則換股，重複至兩者皆可行或達上限。
 
-\textbf{(3) 限制修復（Beta／CVaR repair）}：若 Beta 或 CVaR 超標，計算每檔的「組合風險分數」（被違反的限制以上限正規化後相加），把權重從分數最高且 $w_i > L_i$ 的捐贈者搬到分數最低且仍有空間的接收者；若搬不動則執行「換股」——用分數最低的可選候選替換分數最高的持股、重新分配權重。重複至兩者皆滿足或進行至上限。
+\textbf{Top-K（基準）。}{} 直接取 $\mu$ 前 $K$ 名為持股、\emph{不檢查任何選股限制}，僅做 \textsc{Allocate}。如圖~\ref{fig:topk}，若因 cap／產業容量無法投滿預算，才\emph{被迫}呼叫 \textsc{Diversify} 換股並重配權，迴圈直到投滿，最後 \textsc{Repair}。它\textbf{不執行目標改善的換股}，角色是凸顯 Greedy 帶來多少額外效益。
 
-\textbf{(4) 局部搜尋（1-swap）}：以「目前可行解」為起點，嘗試把每個持股 $i$ 換成 $\mu$ 前 $n_{\text{cand}}$ 名的非持股候選，重做 water-filling 與 repair；接受任何 \emph{可行且 $\mu^\top w$ 嚴格改善} 的換股。整個 swap 多輪掃描，直到無法改善為止。
-
-\textbf{多起點。}{}兩個起點同時嘗試後取最佳：(A) 貪婪選股＋多元化補救；(B) 直接以 Top-$K$（$\mu$ 前 $K$ 名）為起點。後者保證最終目標值 \emph{至少不差於 Top-$K$ 基準}，前者則提供更多元起點。Algorithm \ref{algo:greedy} 為主流程之 pseudocode。
+\begin{figure}[!hbt]
+\centering
+\includegraphics[width=\linewidth]{images/top-k-flowchart.png}
+\caption{Top-K 流程：取 $\mu$ 前 $K$ 名後 \textsc{Allocate} 配權；投不滿預算時被迫 \textsc{Diversify} 換股並重配權，滿足後 \textsc{Repair} 輸出。}
+\label{fig:topk}
+\end{figure}
 
 \begin{algorithm}[!hbt]
-\caption{Greedy heuristic for Stage 1}
+\caption{Top-K heuristic (baseline)}
+\label{algo:topk}
+\begin{algorithmic}[1]
+\Require $(\mu, \beta, \ell, L, U, \gamma, w^0, r_{i,s})$, $K$, $\beta^{\max}$, $\bar{C}^{\text{risk}}$, $\tau$
+\State $\mathit{cap}_i \gets \min(U_i, \ell_i)$;\quad $\mathit{floor}_i \gets L_i$
+\State $S \gets$ top-$K$ stocks by $\mu$ \Comment{no constraint check}
+\State $w \gets \textsc{Allocate}(S, \mathit{cap}, \mathit{floor})$
+\While{budget not fully invested}
+    \State $S \gets \textsc{Diversify}(S, \gamma, \mathit{cap})$ \Comment{forced swap}
+    \State $w \gets \textsc{Allocate}(S, \mathit{cap}, \mathit{floor})$
+\EndWhile
+\State $w, S \gets \textsc{Repair}(w, S, \beta^{\max}, \bar{C}^{\text{risk}})$
+\State \Return $(w, S)$
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Greedy（多起點局部搜尋）。}{} 如圖~\ref{fig:greedy}，同時嘗試兩個起點取最佳：起點 A 以 \textsc{GreedySelect}（依 $\mu$ 加股並守住產業集中度 $\gamma_j$）＋\textsc{Diversify} 建構；起點 B 直接採 Top-K 解。兩者皆經 \textsc{Allocate}＋\textsc{Repair} 後執行 \textsc{LocalSearch}（1-swap，至多 $25$ 輪：把每個持股換成 $\mu$ 前 $n_{\text{cand}}$ 名的非持股候選、重做配權與修復，只接受\emph{可行且 $\mu^\top w$ 嚴格改善}的換股）。因 Top-K 為其中一個起點，Greedy 的目標值\textbf{保證 $\ge$ Top-K}。
+
+\begin{figure}[!hbt]
+\centering
+\includegraphics[width=\linewidth]{images/greedy-flowchart.png}
+\caption{Greedy 多起點流程：起點 A（\textsc{GreedySelect}+\textsc{Diversify}）與起點 B（Top-K 解）各經 \textsc{Allocate}+\textsc{Repair} 與 1-swap \textsc{LocalSearch}，取目標值較高者 $\max(A,B)$。}
+\label{fig:greedy}
+\end{figure}
+
+\begin{algorithm}[!hbt]
+\caption{Greedy multi-start heuristic for Stage 1}
 \label{algo:greedy}
 \begin{algorithmic}[1]
-\Require Inputs $(\mu, \beta, \ell, L, U, \gamma, w^0, r_{i,s})$, $K$, $\beta^{\max}$, $\bar{C}^{\text{risk}}$, $\tau$
+\Require $(\mu, \beta, \ell, L, U, \gamma, w^0, r_{i,s})$, $K$, $\beta^{\max}$, $\bar{C}^{\text{risk}}$, $\tau$, $n_{\text{cand}}$
 \State $\mathit{cap}_i \gets \min(U_i, \ell_i)$;\quad $\mathit{floor}_i \gets L_i$
-\State $S^A \gets \textsc{GreedySelect}(\mu, K, \gamma, \mathit{floor})$
-\State $S^A \gets \textsc{Diversify}(S^A, \gamma, \mathit{cap})$
-\State $w^A \gets \textsc{WaterFill}(S^A, \mathit{cap}, \mathit{floor})$
-\State $w^A, S^A \gets \textsc{Repair}(w^A, S^A, \beta^{\max}, \bar{C}^{\text{risk}})$
-\State $w^B, S^B \gets \textsc{TopKFeasible}(\mu, K, \mathit{cap}, \mathit{floor})$
+\State $S^A \gets \textsc{Diversify}(\textsc{GreedySelect}(\mu, K, \gamma, \mathit{floor}), \gamma, \mathit{cap})$
+\State $S^B \gets$ top-$K$ stocks by $\mu$ \Comment{Top-K start}
 \State $\mathit{best} \gets -\infty$
-\For{$(w, S) \in \{(w^A, S^A), (w^B, S^B)\}$}
-    \State $w, S \gets \textsc{LocalSearch1Swap}(w, S, \mu, \gamma, \mathit{cap}, \mathit{floor})$
+\For{$S \in \{S^A, S^B\}$}
+    \State $w \gets \textsc{Allocate}(S, \mathit{cap}, \mathit{floor})$
+    \State $w, S \gets \textsc{Repair}(w, S, \beta^{\max}, \bar{C}^{\text{risk}})$
+    \State $w, S \gets \textsc{LocalSearch}(w, S, \mu, \gamma, \mathit{cap}, \mathit{floor}, n_{\text{cand}})$
     \If{\textsc{Feasible}$(w)$ \textbf{and} $\mu^\top w > \mathit{best}$}
         \State $\mathit{best} \gets \mu^\top w$;\; $w^\star \gets w$;\; $S^\star \gets S$
     \EndIf
 \EndFor
-\State \Return $(w^\star, S^\star)$
+\State \Return $(w^\star, S^\star)$ \Comment{$\mu^\top w^\star \ge$ Top-K}
 \end{algorithmic}
 \end{algorithm}
-
-\textbf{Top-$K$ baseline。}{}作為「最簡單的笨蛋」基準（下界參考），Top-$K$ 直接取 $\mu$ 前 $K$ 名、僅做 water-filling 與 repair，\textbf{不執行換股最佳化}；它的角色是凸顯「貪婪建構+局部搜尋」帶來多少額外效益。
-
 
 
 % ============================================================
