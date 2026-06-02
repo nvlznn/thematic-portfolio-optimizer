@@ -1,10 +1,15 @@
+% !TEX program = xelatex
 \documentclass[11pt,a4paper]{article}
 
 % --- 中文支援（XeLaTeX + xeCJK；若用 pdfLaTeX 請改用 CJKutf8） ---
 \usepackage{fontspec}
 \usepackage[BoldFont, SlantFont]{xeCJK}
-% 將下行字型換成系統中實際存在的中文字型，例如：PingFang TC / Heiti TC / 新細明體
-\setCJKmainfont{Microsoft JhengHei}
+% 跨平台中文字型 fallback：依序嘗試 macOS → Windows → Overleaf/Linux，最後一棒一定存在
+\IfFontExistsTF{Heiti TC}
+  {\setCJKmainfont{Heiti TC}}                       % macOS 內建（黑體-繁）
+  {\IfFontExistsTF{Microsoft JhengHei}
+    {\setCJKmainfont{Microsoft JhengHei}}           % Windows 內建（微軟正黑體）
+    {\setCJKmainfont{Noto Sans CJK TC}}}            % Overleaf / Linux 內建（Google Noto）
 
 
 \usepackage{amssymb}        % 保險，CVaR 等若用到額外數學符號
@@ -352,15 +357,15 @@ S5 Warm-start & 3 & S1 對角三格翻 warm（$w^0\neq0$） & turnover binding \
 \section{Performance evaluation}
 \label{sec-eval}
 
-我們以 \textbf{(a) MILP 最佳解}（CBC, \texttt{mip\_gap} = 0、\texttt{time\_limit} = 300\,s）、\textbf{(b) 我們的 greedy 啟發式}、\textbf{(c) Top-$K$ 等權基準} 三者在同一份輸入上對照。Optimality gap 定義為 $\text{gap} = (z^{\text{MILP}} - z) / |z^{\text{MILP}}|$（百分比；目標為極大化）。
+本節在同一份輸入上對照三種求解策略：\textbf{(a) MILP 最佳解}（CBC 後端，MIP gap 容忍度設為 $0$、求解時間上限 $300$\,s）、\textbf{(b) 本研究提出之貪婪啟發式（greedy heuristic）}、與 \textbf{(c) Top-$K$ 等權基準}。最佳化落差（optimality gap）定義為 $\text{gap} = (z^{\text{MILP}} - z) / |z^{\text{MILP}}|$，以百分比表示；目標為極大化，故 gap 為正代表該方法之目標值低於 MILP 最佳解。
 
 \subsection{Stage 1 規模掃描（合成 instances + 真實 instance）}
 
-\Cref{tab:bench-sweep} 為在五個規模上（$N \in \{50, 200, 500, 1000, 1052\}$）的對照結果。三項觀察：
+\Cref{tab:bench-sweep} 為五個規模（$N \in \{50, 200, 500, 1000, 1052\}$）上的對照結果，可歸納三項觀察：
 \begin{itemizeTight}
-    \item 我們的 greedy 啟發式相對 MILP 之 gap 始終在 \textbf{0.93\%–1.56\%} 之間，與 universe 規模無明顯關聯；
-    \item Top-$K$ 基準的 gap 隨 universe 規模放大而 \emph{大致單調增加}（9.80\% → 15.05\%），原因是 universe 越大、$\mu$ 前 $K$ 名以外的可換股越多、單純「按 $\mu$ 排序」漏掉的機會就越大。這正凸顯了「換股 / local search」這一步的價值；
-    \item MILP 求解時間從 $N=50$ 的 \textbf{0.21\,s} 線性成長到 $N=1052$ 的 \textbf{2.19\,s}（CBC 單核），完全在可實用範圍內。
+    \item 本研究之貪婪啟發式相對 MILP 之 gap 始終落在 \textbf{0.93\%--1.56\%}，且與 universe 規模無明顯關聯；
+    \item Top-$K$ 基準之 gap 隨 universe 規模擴大而\emph{大致單調增加}（$9.80\% \to 15.05\%$）：universe 越大，$\mu$ 排名前 $K$ 名以外的可替換個股越多，單純「依 $\mu$ 排序」所遺漏的機會也越大；此正凸顯啟發式中「換股／局部搜尋（local search）」步驟的價值；
+    \item MILP 求解時間自 $N=50$ 的 \textbf{0.21\,s} 近線性成長至 $N=1052$ 的 \textbf{2.19\,s}（CBC 單核），完全落於可實用範圍內。
 \end{itemizeTight}
 
 \begin{table}[!hbt]
@@ -402,11 +407,11 @@ $N$ & $K$ & method & objective & gap (\%) & $\beta$ & CVaR & time (s) \\
 
 \subsection{Stage 1 合成實例 DoE 對照（27 個 self-generated instance）}
 
-\Cref{tab:synth-bench} 為四種方法（MILP optimal、greedy heuristic、Top-$K$ baseline）在 27 個合成 instance 上、依五個子集平均的 optimality gap。三項結論：
+\Cref{tab:synth-bench} 為三種方法（MILP optimal、greedy heuristic、Top-$K$ baseline）在 27 個合成 instance 上、依五個子集平均之最佳化落差，可得三項結論：
 \begin{itemizeTight}
-    \item 在常規可行的子集（S1–S3）上，greedy heuristic 幾乎完全貼合 MILP 最佳解（平均 gap $\approx 0.00\%$），Top-$K$ 落後 $0.3\%$–$1.6\%$；全 27 個 instance 中 heuristic \textbf{擊敗 Top-$K$ 達 26/27}（唯一例外為 small-universe $+$ warm-start 的邊角案例 SYN\_025）。
-    \item S4「不可行陷阱」子集 heuristic 與 Top-$K$ 均出現約 $32\%$ 的大 gap——因為 MILP 透過 relaxation fallback 跳出原始模型才求得解，而我們的 heuristic 受限於\emph{原始}約束、不含放寬機制；此對比正好凸顯兩者的設計權衡。
-    \item S5「warm-start」子集 heuristic 平均略\emph{勝} MILP（$-2.50\%$）：某些 seed 下 turnover 限制未綁定，heuristic 在較自由的解空間找到更高目標，而 MILP 在 \texttt{mip\_gap} 容忍下提前停止。
+    \item 在常規可行的子集（S1--S3）上，貪婪啟發式幾乎完全貼合 MILP 最佳解（平均 gap $\approx 0.00\%$），Top-$K$ 則落後 $0.3\%$--$1.6\%$；全 27 個 instance 中，啟發式\textbf{於 26 個上擊敗 Top-$K$}，唯一例外為 small-universe 結合 warm-start 的邊角案例 SYN\_025。
+    \item S4「不可行陷阱」子集中，啟發式與 Top-$K$ 均出現約 $32\%$ 的大幅落差——因 MILP 係透過放寬機制（relaxation fallback）跳離原始模型方求得解，而啟發式受限於\emph{原始}約束、不含放寬機制；此對比恰好凸顯兩者的設計權衡。
+    \item S5「warm-start」子集中，啟發式平均略\emph{勝} MILP（$-2.50\%$）：在部分 seed 下周轉率限制未綁定，啟發式得以於較寬鬆的解空間中找到更高目標值，而 MILP 則在 MIP gap 容忍度下提前停止。
 \end{itemizeTight}
 
 \begin{table}[!hbt]
@@ -423,15 +428,15 @@ S4 不可行陷阱 & 4 & 1.30 & 31.87\% & 31.97\% \\
 S5 Warm-start & 3 & 1.14 & $-2.50\%$ & $-4.30\%$ \\
 \bottomrule
 \end{tabular}
-\caption{四方法在 27 個合成 instance 上之平均 optimality gap（相對 MILP optimal）。S4 之大 gap 來自 MILP 經 relaxation 跳出原模型；S5 之負 gap 來自部分 seed 下 turnover 未綁定。Heuristic 全體擊敗 Top-$K$：26/27。}
+\caption{三種方法在 27 個合成 instance 上之平均最佳化落差（相對 MILP optimal）。S4 之大 gap 源於 MILP 經放寬機制跳離原模型；S5 之負 gap 源於部分 seed 下周轉率未綁定。啟發式整體以 26/27 擊敗 Top-$K$。}
 \label{tab:synth-bench}
 \end{table}
 
-\textbf{Relaxation fallback 實證。}{}真實 instance 從未觸發放寬（其 active constraints 僅 CVaR 與 turnover），合成 instance 的 S4 子集則正面驗證了 \cref{sec-model} 設計的逐步放寬：SYN\_022（tight CVaR $=0.008$）之 \texttt{relaxation\_log} 為 \texttt{[cvar]}；SYN\_023（tight industry）與 SYN\_024（infeasibility trap）皆完整走過 \texttt{[cvar $\to$ turnover $\to$ beta $\to$ industry]}。這證明 \cref{sec-model} 的「\texttt{cvar $\to$ turnover $\to$ beta $\to$ industry}」放寬順序按設計運作，且僅在原模型不可行時才啟動。
+\textbf{放寬機制（relaxation fallback）之實證。}{}真實 instance 全程未觸發任何放寬，其唯二作用中（active）限制為 CVaR 與周轉率；合成實例的 S4 子集則正面驗證了 \cref{sec-model} 所設計的逐步放寬程序：SYN\_022（CVaR 上限緊縮至 $0.008$）僅放寬 CVaR 一層即恢復可行，SYN\_023（產業上限緊縮）與 SYN\_024（不可行陷阱）則完整走過 CVaR $\to$ 周轉率 $\to$ Beta $\to$ 產業 四層放寬。此結果證明 \cref{sec-model} 所訂之放寬順序確實按設計運作，且僅在原模型不可行時才啟動。
 
 \subsection{Stage 2 整數張數落地 — 真實案例}
 
-在真實 instance 上跑 Stage 2（$V^0 = 10{,}000{,}000$ 元、$c_b=0.001425$、$c_s=0.004425$、$\lambda_{\text{trade}}=0.0005$），以部署的 Stage 1 解 \texttt{ideal\_portfolio.json}（目標 $2.3079$、$\beta=0.84$，與 \cref{tab:bench-sweep} 之嚴格最佳上界 $2.3085$ 相差 $<0.03\%$）為輸入。結果：求解狀態 Optimal、總 L1 偏離 $\sum d_i = \textbf{0.0366}$（即實際相對權重平均比理想多偏 0.18\%）、交易筆數 20（全買、無賣，因首期 $x^0 \equiv 0$）、剩餘現金 \textbf{23{,}804.15} 元（佔 $V^0$ 之 0.238\%）。20 檔中有 13 檔 $d_i \approx 0$、僅 7 檔因離散粒度而偏離。\Cref{tab:order-sheet} 列出 order sheet 中偏離最大的五檔，做為「為什麼 Stage 2 不是純取整」的證據：偏離全部來自高股價股票無法在 $U V^0 = 1{,}000{,}000$ 元預算內塞滿、或低股價股票每張 / $V^0$ 的離散粒度過粗。
+我們以部署的 Stage 1 最佳解（目標值 $2.3079$、$\beta = 0.84$，與 \cref{tab:bench-sweep} 之嚴格最佳上界 $2.3085$ 相差 $<0.03\%$）為輸入，在真實 instance 上求解 Stage 2，參數設定為初始資金 $V^0 = 10{,}000{,}000$ 元、買進成本率 $c_b = 0.001425$、賣出成本率 $c_s = 0.004425$、交易懲罰係數 $\lambda_{\text{trade}} = 0.0005$。求解狀態為 Optimal；總 L1 偏離 $\sum_i d_i = \textbf{0.0366}$（即實際相對權重相對理想平均偏離 $0.18\%$）；交易筆數為 $20$，全為買進、無賣出（因首期 $x^0 \equiv 0$）；剩餘現金 \textbf{23{,}804.15} 元，佔 $V^0$ 之 $0.238\%$。20 檔持股中有 13 檔達 $d_i \approx 0$，僅 7 檔因張數離散粒度而偏離。\Cref{tab:order-sheet} 列出偏離最大的五檔，用以說明 Stage 2 何以並非單純的連續權重取整：其偏離全數源於高股價個股無法在單檔上限 $U V^0 = 1{,}000{,}000$ 元的預算內補足權重，或低股價個股「每張權重 $= P_i / V^0$」之離散粒度過粗。
 
 \begin{table}[!hbt]
 \centering
@@ -454,13 +459,13 @@ stock\_id & 每張價格 & 買數 & w\_actual & w\_ideal & deviation & 備註 \\
 
 \subsection{研究問題回答}
 
-我們以實證結果直接回應 proposal §8 列出的五個研究問題：
+我們以前述實證結果，逐一回應本研究於計畫階段所提出的五個研究問題：
 \begin{itemize}[leftmargin=2em]
     \item \textbf{RQ1：受限最佳化是否優於 Top-$K$ 等權？} 是。在真實 instance 上 Stage 1 MILP 之 $\mu^\top w$ 比 Top-$K$ 高 \textbf{17.71\%}（2.3085 vs.\ 1.9611）；在 5 個規模上皆嚴格 dominate。
     \item \textbf{RQ2：風險、產業與周轉限制是否提升穩定性？} 在部署的 Stage 1 解中 CVaR $= \bar{C}^{\text{risk}} = 0.04$ 與 turnover $= \tau = 1.00$（首期 $w^0 \equiv 0$ 之結構性下限）兩條限制 active；組合 $\beta = 0.84$ 未觸頂於 $\beta^{\max} = 1.10$，顯示在當期動能驅動下，下檔風險與買進預算才是主導限制。
     \item \textbf{RQ3：連續權重轉整數張數的偏離有多大？} 累積 $\sum_i d_i = 0.0366$（3.66\%）；20 檔中 13 檔完全對齊，僅 7 檔因離散粒度而偏離；最大單檔偏離 0.0164 來自一張價格約 50 萬的 6727 亞泰金屬。
     \item \textbf{RQ4：納入現金守恆與交易成本後是否仍能執行？} 是。剩餘現金 23{,}804 元（0.238\%）、$C \geq 0$ 始終成立。
-    \item \textbf{RQ5：兩階段相較單階段是否更貼近真實流程？} 是。Stage 2 處理了單階段連續權重模型完全忽略的「整數張數、現金守恆、買賣互斥、手續費」四項實務限制，從本研究 order sheet 可直接交付下單，而單階段模型的連續權重需要人工事後取整、容易引入二次偏離。
+    \item \textbf{RQ5：兩階段相較單階段是否更貼近真實流程？} 是。Stage 2 額外處理了單階段連續權重模型完全忽略的「整數張數、現金守恆、買賣互斥、交易手續費」四項實務限制，所產生的下單清單可直接交付執行；反之，單階段模型輸出的連續權重仍須人工事後取整，容易引入二次偏離。
 \end{itemize}
 
 
@@ -469,11 +474,11 @@ stock\_id & 每張價格 & 買數 & w\_actual & w\_ideal & deviation & 備註 \\
 \section{Conclusions}
 \label{sec-conclusion}
 
-本研究將「主題型台股投資的再平衡決策」嚴格界定為兩個串接的 MILP 子問題，並以真實 TEJ 資料 + 自我生成的規模掃描 instance 雙軌驗證了系統。Stage 1 給出考慮 Beta／CVaR／產業集中度／周轉率／流動性的理想連續權重；Stage 2 再把它無縫落地成考慮整數張數、現金守恆與買賣互斥的可下單清單。我們另外提出一個多起點啟發式作為自有演算法，在 1{,}052 檔 universe 上之 optimality gap 為 \textbf{1.05\%}，相較 Top-$K$ 等權基準（gap 15.05\%）優異很多，且無需商用 solver、秒級即可給出可行解；於規模上探到 $N=1052$ 時 MILP 仍能在約 2.2 秒內解出最佳解，故啟發式在現階段不是必要、但作為 fallback 與更大規模延伸（如多期聯立）的基礎工具仍有價值。
+本研究將「主題型台股投資的再平衡決策」嚴謹地形式化為兩個串接的 MILP 子問題，並以真實 TEJ 資料與自我生成的規模掃描 instance 雙軌驗證整體系統。Stage 1 求出同時考量 Beta、CVaR、產業集中度、周轉率與流動性的理想連續權重；Stage 2 再將其無縫轉化為符合整數張數、現金守恆與買賣互斥的可執行下單清單。此外，我們提出一套多起點貪婪啟發式作為自有演算法：在 1{,}052 檔 universe 上其最佳化落差僅 \textbf{1.05\%}，顯著優於 Top-$K$ 等權基準（gap $15.05\%$），且無需商用求解器即可於秒級內給出可行解。值得注意的是，即使規模上探至 $N = 1052$，MILP 仍能於約 $2.2$ 秒內求得最佳解；因此該啟發式於現階段並非必要，但作為求解失敗時的後備方案、以及未來向更大規模問題（如多期聯立最佳化）延伸的基礎工具，仍具實用價值。
 
-\textbf{後續工作。}{}本研究尚有以下可延伸方向（呼應 proposal §10）：
+\textbf{後續工作。}{}本研究尚有以下可延伸方向：
 \begin{itemizeTight}
-    \item Rolling backtest：以本兩階段系統 vs.\ Top-$K$ vs.\ 純 Stage 1 連續權重 三條策略，跑 5 年月頻 / 季頻回測，比較 NAV、Sharpe、Max Drawdown、實際周轉率與現金占比。
+    \item 滾動式回測（rolling backtest）：以本兩階段系統、Top-$K$ 等權、與純 Stage 1 連續權重三條策略，進行 5 年月頻／季頻回測，比較 NAV、Sharpe 比率、最大回撤（max drawdown）、實際周轉率與現金占比。
     \item 將吸引力分數延伸為多因子或機器學習預測（以 walk-forward 防止前視偏誤）；
     \item 引入更細緻的交易衝擊成本函數（如 sq-root law）；
     \item 將整體模型延伸為真正的 multi-period optimization（目前每期獨立求解，未捕捉跨期再平衡的耦合）。

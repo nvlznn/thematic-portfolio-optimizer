@@ -55,32 +55,41 @@
 \@writefile{toc}{\contentsline {section}{\numberline {4}Algorithms}{6}{}\protected@file@percent }
 \newlabel{sec-algo}{{4}{6}{}{section.4}{}}
 \newlabel{sec-algo@cref}{{[section][4][]4}{[1][6][]6}{}{}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}Data collection and generation}{6}{}\protected@file@percent }
-\newlabel{sec-data}{{5}{6}{}{section.5}{}}
-\newlabel{sec-data@cref}{{[section][5][]5}{[1][6][]6}{}{}{}}
-\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces Greedy heuristic for Stage 1}}{7}{}\protected@file@percent }
-\newlabel{algo:greedy}{{1}{7}{}{algorithm.1}{}}
-\newlabel{algo:greedy@cref}{{[algorithm][1][]1}{[1][6][]7}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Top-K 流程：取 $\mu $ 前 $K$ 名後 \textsc  {Allocate} 配權；投不滿預算時被迫 \textsc  {Diversify} 換股並重配權，滿足後 \textsc  {Repair} 輸出。}}{6}{}\protected@file@percent }
+\newlabel{fig:topk}{{1}{6}{}{figure.1}{}}
+\newlabel{fig:topk@cref}{{[figure][1][]1}{[1][6][]6}{}{}{}}
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces Top-K heuristic (baseline)}}{7}{}\protected@file@percent }
+\newlabel{algo:topk}{{1}{7}{}{algorithm.1}{}}
+\newlabel{algo:topk@cref}{{[algorithm][1][]1}{[1][6][]7}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Greedy 多起點流程：起點 A（\textsc  {GreedySelect}+\textsc  {Diversify}）與起點 B（Top-K 解）各經 \textsc  {Allocate}+\textsc  {Repair} 與 1-swap \textsc  {LocalSearch}，取目標值較高者 $\max (A,B)$。}}{7}{}\protected@file@percent }
+\newlabel{fig:greedy}{{2}{7}{}{figure.2}{}}
+\newlabel{fig:greedy@cref}{{[figure][2][]2}{[1][6][]7}{}{}{}}
+\@writefile{loa}{\contentsline {algorithm}{\numberline {2}{\ignorespaces Greedy multi-start heuristic for Stage 1}}{7}{}\protected@file@percent }
+\newlabel{algo:greedy}{{2}{7}{}{algorithm.2}{}}
+\newlabel{algo:greedy@cref}{{[algorithm][2][]2}{[1][6][]7}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Data collection and generation}{8}{}\protected@file@percent }
+\newlabel{sec-data}{{5}{8}{}{section.5}{}}
+\newlabel{sec-data@cref}{{[section][5][]5}{[1][6][]8}{}{}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces 自生成合成實例組之 DoE：5 個子集、共 27 個 instance。中心格 baseline 為 $|I|=50,\,|\Omega |=250$、5 balanced 產業、Gaussian、block 相關、tight $\beta $、無 $\mu $-$\beta $ 相關、uniform 價、cold start、normal caps。}}{9}{}\protected@file@percent }
 \newlabel{tab:synth-doe}{{2}{9}{}{table.2}{}}
-\newlabel{tab:synth-doe@cref}{{[table][2][]2}{[1][8][]9}{}{}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Performance evaluation}{9}{}\protected@file@percent }
-\newlabel{sec-eval}{{6}{9}{}{section.6}{}}
-\newlabel{sec-eval@cref}{{[section][6][]6}{[1][9][]9}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Stage 1 規模掃描（合成 instances + 真實 instance）}{9}{}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Stage 1 三種方法在不同規模 universe 上的 objective、gap、與時間（rebalance date = 2026/05/20、$|\Omega |=240$、CBC backend）。最後一列為真實 instance；其餘為 self-generated 子集合。}}{10}{}\protected@file@percent }
-\newlabel{tab:bench-sweep}{{3}{10}{}{table.3}{}}
-\newlabel{tab:bench-sweep@cref}{{[table][3][]3}{[1][9][]10}{}{}{}}
+\newlabel{tab:synth-doe@cref}{{[table][2][]2}{[1][9][]9}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Performance evaluation}{10}{}\protected@file@percent }
+\newlabel{sec-eval}{{6}{10}{}{section.6}{}}
+\newlabel{sec-eval@cref}{{[section][6][]6}{[1][10][]10}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Stage 1 規模掃描（合成 instances + 真實 instance）}{10}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Stage 1 合成實例 DoE 對照（27 個 self-generated instance）}{10}{}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces 四方法在 27 個合成 instance 上之平均 optimality gap（相對 MILP optimal）。S4 之大 gap 來自 MILP 經 relaxation 跳出原模型；S5 之負 gap 來自部分 seed 下 turnover 未綁定。Heuristic 全體擊敗 Top-$K$：26/27。}}{11}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Stage 1 三種方法在不同規模 universe 上的 objective、gap、與時間（rebalance date = 2026/05/20、$|\Omega |=240$、CBC backend）。最後一列為真實 instance；其餘為 self-generated 子集合。}}{11}{}\protected@file@percent }
+\newlabel{tab:bench-sweep}{{3}{11}{}{table.3}{}}
+\newlabel{tab:bench-sweep@cref}{{[table][3][]3}{[1][10][]11}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces 三種方法在 27 個合成 instance 上之平均最佳化落差（相對 MILP optimal）。S4 之大 gap 源於 MILP 經放寬機制跳離原模型；S5 之負 gap 源於部分 seed 下周轉率未綁定。啟發式整體以 26/27 擊敗 Top-$K$。}}{11}{}\protected@file@percent }
 \newlabel{tab:synth-bench}{{4}{11}{}{table.4}{}}
-\newlabel{tab:synth-bench@cref}{{[table][4][]4}{[1][10][]11}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Stage 2 整數張數落地 — 真實案例}{11}{}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Stage 2 偏離最大的 5 檔（按 $|d_i|$ 排序）；剩餘現金 23{,}804.15 元（0.238\%）。}}{11}{}\protected@file@percent }
-\newlabel{tab:order-sheet}{{5}{11}{}{table.5}{}}
-\newlabel{tab:order-sheet@cref}{{[table][5][]5}{[1][11][]11}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}研究問題回答}{11}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusions}{12}{}\protected@file@percent }
-\newlabel{sec-conclusion}{{7}{12}{}{section.7}{}}
-\newlabel{sec-conclusion@cref}{{[section][7][]7}{[1][12][]12}{}{}{}}
-\gdef \@abspage@last{12}
+\newlabel{tab:synth-bench@cref}{{[table][4][]4}{[1][11][]11}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Stage 2 整數張數落地 — 真實案例}{12}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Stage 2 偏離最大的 5 檔（按 $|d_i|$ 排序）；剩餘現金 23{,}804.15 元（0.238\%）。}}{12}{}\protected@file@percent }
+\newlabel{tab:order-sheet}{{5}{12}{}{table.5}{}}
+\newlabel{tab:order-sheet@cref}{{[table][5][]5}{[1][12][]12}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}研究問題回答}{12}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusions}{13}{}\protected@file@percent }
+\newlabel{sec-conclusion}{{7}{13}{}{section.7}{}}
+\newlabel{sec-conclusion@cref}{{[section][7][]7}{[1][13][]13}{}{}{}}
+\gdef \@abspage@last{13}
