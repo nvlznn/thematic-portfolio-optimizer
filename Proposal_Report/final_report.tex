@@ -100,8 +100,8 @@ Final Project Report \\[4pt]
 
 
 
+
 % ============================================================
-```latex
 \section{Problem description}
 \label{sec-problem}
 
@@ -109,14 +109,13 @@ Final Project Report \\[4pt]
 
 第二階段是\textbf{交易落地決策}：給定第一階段求得之理想權重 $w^\star$ 與持股名單 $z^\star$，並結合期初張數 $x^0$、期初現金 $C^0$ 與每張價格 $P_i$，決定每檔股票應買入張數 $u_i$、賣出張數 $v_i$、最終持有張數 $x_i$ 與剩餘現金 $C$。此階段要求庫存守恆、現金非負、持股名單延用 Stage 1 結果、買賣互斥，且所有交易張數皆為非負整數。目標是使實際配置盡量貼近 $w^\star$，並加入小幅交易標的數懲罰以避免零碎下單。
 
-\textbf{原本人工 vs.\ 系統化。}
-\Cref{tab:auto} 摘要原流程中需人工判斷的環節，以及本研究如何以最佳化模型將其系統化。
+\textbf{原本人工 vs.\ 系統化。} \Cref{tab:auto} 摘要原流程中需人工判斷的環節，以及本研究如何以最佳化模型將其系統化。
 
 \begin{table}[!hbt]
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\renewcommand{\arraystretch}{0.9}
+\renewcommand{\arraystretch}{0.88}
 \begin{tabular}{p{0.42\textwidth} p{0.50\textwidth}}
 \toprule
 原本需人工處理之事項 & 本研究之系統化處理方式 \\
@@ -151,15 +150,15 @@ Final Project Report \\[4pt]
 & \sum_{i\in I}\mu_i w_i \label{obj1}\\[-1mm]
 \text{s.t.}\quad
 & \sum_{i\in I}w_i=1, 
-&& \sum_{i\in I}z_i=K, \label{c1:basic}\\
+&& \sum_{i\in I}z_i=K, \label{c1:basic}\\[-0.5mm]
 & Lz_i\le w_i\le Uz_i,\quad \forall i\in I,
-&& w_i\le \ell_i,\quad \forall i\in I, \label{c1:boxliq}\\
+&& w_i\le \ell_i,\quad \forall i\in I, \label{c1:boxliq}\\[-0.5mm]
 & \sum_{i\in S_j}w_i\le \gamma_j,\quad \forall j\in J,
-&& \sum_{i\in I}\beta_iw_i\le \beta^{\max}, \label{c1:indbeta}\\
+&& \sum_{i\in I}\beta_iw_i\le \beta^{\max}, \label{c1:indbeta}\\[-0.5mm]
 & w_i-w_i^0=\delta_i^+-\delta_i^-,\quad \forall i\in I,
-&& \sum_{i\in I}(\delta_i^++\delta_i^-)\le \tau, \label{c1:turn}\\
+&& \sum_{i\in I}(\delta_i^++\delta_i^-)\le \tau, \label{c1:turn}\\[-0.5mm]
 & \xi_s\ge -\sum_{i\in I}r_{i,s}w_i-\eta,\quad \forall s\in\Omega,
-&& \eta+\frac{1}{(1-\alpha)|\Omega|}\sum_{s\in\Omega}\xi_s\le \bar C^{\text{risk}}, \label{c1:cvar}\\
+&& \eta+\frac{1}{(1-\alpha)|\Omega|}\sum_{s\in\Omega}\xi_s\le \bar C^{\text{risk}}, \label{c1:cvar}\\[-0.5mm]
 & w_i,\delta_i^\pm,\xi_s\ge0,\quad \eta\in\mathbb R,
 && z_i\in\{0,1\},\quad \forall i\in I. \nonumber
 \end{align}
@@ -169,23 +168,7 @@ Final Project Report \\[4pt]
 
 \subsection{Stage 2：交易落地與整數張數轉換}
 
-給定 Stage 1 的解 $(w^\star,z^\star)$，Stage 2 將理想權重轉換為可執行交易張數。令 $P_i$ 為每張價格、$x_i^0$ 為期初張數、$C^0$ 為期初現金、$c_b,c_s$ 為買入／賣出交易成本率，且
-$
-V^0=C^0+\sum_iP_ix_i^0
-$
-為期初總資產。若股票被選入，最低與最高持有張數分別為
-$
-L_i^{\text{lot}}=\lceil LV^0/P_i\rceil
-$
-與
-$
-U_i^{\text{lot}}=\lfloor UV^0/P_i\rfloor
-$；
-另定義
-$
-\bar u_i=\max(0,U_i^{\text{lot}}-x_i^0)
-$
-為最大可買入張數。
+給定 Stage 1 的解 $(w^\star,z^\star)$，Stage 2 將理想權重轉換為可執行交易張數。令 $P_i$ 為每張價格、$x_i^0$ 為期初張數、$C^0$ 為期初現金、$c_b,c_s$ 為買入／賣出交易成本率，且 $V^0=C^0+\sum_iP_ix_i^0$ 為期初總資產。若股票被選入，最低與最高持有張數分別為 $L_i^{\text{lot}}=\lceil LV^0/P_i\rceil$ 與 $U_i^{\text{lot}}=\lfloor UV^0/P_i\rfloor$；另定義 $\bar u_i=\max(0,U_i^{\text{lot}}-x_i^0)$ 為最大可買入張數。
 
 \textbf{Stage 2 模型：}
 {\scriptsize
@@ -194,14 +177,14 @@ $
 \min_{x,u,v,C,B,Q,d}\quad 
 & \sum_{i\in I}d_i+\lambda_{\text{trade}}\sum_{i\in I}(B_i+Q_i) \label{obj2}\\[-1mm]
 \text{s.t.}\quad
-& x_i=x_i^0+u_i-v_i,\quad \forall i\in I, \label{c2:inv}\\
+& x_i=x_i^0+u_i-v_i,\quad \forall i\in I, \label{c2:inv}\\[-0.5mm]
 & C=C^0+\sum_{i\in I}P_iv_i(1-c_s)-\sum_{i\in I}P_iu_i(1+c_b), 
-&& C\ge0, \label{c2:cash}\\
+&& C\ge0, \label{c2:cash}\\[-0.5mm]
 & d_i\ge \frac{P_ix_i}{V^0}-w_i^\star,\quad \forall i\in I,
-&& d_i\ge w_i^\star-\frac{P_ix_i}{V^0},\quad \forall i\in I, \label{c2:dev}\\
-& L_i^{\text{lot}}z_i^\star\le x_i\le U_i^{\text{lot}}z_i^\star,\quad \forall i\in I, \label{c2:lot}\\
+&& d_i\ge w_i^\star-\frac{P_ix_i}{V^0},\quad \forall i\in I, \label{c2:dev}\\[-0.5mm]
+& L_i^{\text{lot}}z_i^\star\le x_i\le U_i^{\text{lot}}z_i^\star,\quad \forall i\in I, \label{c2:lot}\\[-0.5mm]
 & u_i\le \bar u_iB_i,\quad v_i\le x_i^0Q_i,\quad \forall i\in I,
-&& B_i+Q_i\le1,\quad \forall i\in I, \label{c2:bq}\\
+&& B_i+Q_i\le1,\quad \forall i\in I, \label{c2:bq}\\[-0.5mm]
 & x_i,u_i,v_i\in\mathbb Z_{\ge0},\quad B_i,Q_i\in\{0,1\},
 && d_i,C\ge0. \nonumber
 \end{align}
@@ -222,7 +205,21 @@ Stage 1 使用兩個啟發式方法：\textbf{Top-K} 作為下界基準，\textb
 
 \textbf{Top-K} 直接選取 $\mu_i$ 最高的 $K$ 檔股票，先以 \textsc{Allocate} 配權，若因容量或產業限制導致無法投滿，則呼叫 \textsc{Diversify} 進行被迫換股，最後再以 \textsc{Repair} 修復風險限制。Top-K 不進行主動目標改善，因此主要作為比較基準。
 
+\begin{figure}[!hbt]
+\centering
+\includegraphics[width=0.98\linewidth]{top-k-flowchart.png}
+\caption{Top-K 流程：取 $\mu$ 前 $K$ 名後 \textsc{Allocate} 配權；投不滿預算時被迫 \textsc{Diversify} 換股並重配權，滿足後 \textsc{Repair} 輸出。}
+\label{fig:topk}
+\end{figure}
+
 \textbf{Greedy} 採用多起點局部搜尋。起點 A 由 industry-aware greedy selection 建構，起點 B 則採用 Top-K 解；兩個起點皆經過 \textsc{Allocate} 與 \textsc{Repair} 後，再執行 1-swap \textsc{LocalSearch}。Local search 會嘗試將既有持股替換為高 $\mu_i$ 的非持股候選，並只接受可行且使 $\mu^\top w$ 嚴格上升的換股。由於 Top-K 是 Greedy 的起點之一，Greedy 的目標值保證不低於 Top-K。
+
+\begin{figure}[!hbt]
+\centering
+\includegraphics[width=0.98\linewidth]{greedy-flowchart.png}
+\caption{Greedy 多起點流程：起點 A 與起點 B 各經 \textsc{Allocate}+\textsc{Repair} 與 1-swap \textsc{LocalSearch}，最後取目標值較高者。}
+\label{fig:greedy}
+\end{figure}
 
 \begin{table}[!hbt]
 \centering
@@ -242,7 +239,6 @@ Component & Function \\
 \caption{Summary of heuristic components}
 \label{tab:heuristic-components}
 \end{table}
-
 
 % ============================================================
 \section{Data collection and generation}
