@@ -308,14 +308,9 @@ Stage 1 提供兩個啟發式：\textbf{Top-K}（下界基準）與 \textbf{Gree
 \section{Data collection and generation}
 \label{sec-data}
 
-\textbf{真實世界資料。}{}本研究所用之台股歷史價量資料來自 \emph{台灣經濟新報 (TEJ)}「日收盤行情」與「TEJ 主產業」資料庫，原始下載放在 \texttt{data/raw/}（CP950/Big-5 編碼），經由 \texttt{src/data/clean.py} 標準化欄位名稱、剔除指數列 (\texttt{Y9999})、處理停牌補值（forward-fill 上限 3 日）、單位換算（張 $\to$ 股、千元 $\to$ 元），再輸出為 \texttt{data/processed/prices.parquet}（§7.1 介面契約）；候選股池與市值、產業由 \texttt{candidates.parquet}（§7.2）提供；日頻 join 完成的價量／市值／beta\_3m／ROE／營收成長表為 \texttt{params.parquet}（§7.3）；大盤指數 (Y9999) 收盤獨立存於 \texttt{benchmark.parquet} 作為 $\beta$ 回歸用之 market factor。整個資料管線在 \texttt{src/data/} 與 \texttt{MILP\_phase\_1/stage1/data\_prep.py} 之間以 parquet 為介面，可被多人平行開發。
+\textbf{真實世界資料。}{}本研究所用之台股歷史價量資料來自 \emph{台灣經濟新報 (TEJ)}的資料庫，經由標準化欄位名稱、剔除指數列、處理停牌補值（forward-fill 上限 3 日）、單位換算，再輸出為 \texttt{ prices.parquet}；候選股池與市值、產業由 \texttt{candidates.parquet}提供；日頻 join 完成的價量／市值／beta\_3m／ROE／營收成長表為 \texttt{params.parquet}；大盤指數收盤獨立存於 \texttt{benchmark.parquet} 作為 $\beta$ 回歸用之 market factor。整個資料管線之間以 parquet 為介面，可被多人平行開發。
 
-\textbf{參數估計 — Module 2 (\texttt{src/params/})。}{}吸引力分數、Beta、流動性上限與 CVaR 情境四項由獨立模組 \texttt{src/params/} 預先計算後寫入兩個契約檔：
-\begin{itemizeTight}
-    \item \texttt{factors.parquet}（每檔一列）：欄位 \texttt{stock\_id, mu, beta, liquidity\_cap, w0, industry, as\_of}；
-    \item \texttt{scenarios.parquet}（每個情境一列）：欄位 \texttt{scenario\_id} 加上每檔股票一欄，值為情境報酬 $r_{i,s}$。
-\end{itemizeTight}
-入口為 \texttt{python -m src.params.build}，會根據 \texttt{MILP\_phase\_1/stage1/config.yaml} 內的 \texttt{mu / beta / liquidity / scenarios} 區段，於 \texttt{as\_of} 重新算齊所有參數；Stage 1 之 \texttt{data\_prep.py} 預設讀這兩個檔，若不存在或 \texttt{as\_of} 不符則 fallback 為即時計算，確保介面變動不會打斷下游。六個關鍵參數的構造如下：
+\textbf{參數估計 — Module 2 (\texttt{src/params/})。}
 \begin{itemizeTight}
     \item \textbf{$\mu_i$（吸引力分數，\texttt{params/mu.py}）}：基準版採 12-1 動能——過去 11 個月對數報酬、排除最近 1 個月以避開短期反轉；可選「動能 + ROE z-score」混合版（\texttt{config.yaml.mu.method=blend}）。資料若可用視窗不足會自動降階到實際可用天數。
     \item \textbf{$\beta_i$（\texttt{params/beta.py}）}：預設以個股對 TAIEX (Y9999) 之過去 120 日對數報酬做滾動 OLS（method=\texttt{ols}），同檔提供 \texttt{tej\_params}（讀 \texttt{params.parquet} 的 \texttt{beta\_3m}）與 \texttt{tej\_raw}（解析原始 \texttt{raw\_beta.csv}）兩個備援。所有來源最後一律 winsorize 到 $[-1, 3]$ 並把缺值補成 $\beta_i = 1.0$。
@@ -327,7 +322,7 @@ Stage 1 提供兩個啟發式：\textbf{Top-K}（下界基準）與 \textbf{Gree
 
 \textbf{規模掃描子集（real-data subsets）。}{}為觀察演算法在不同 universe 規模下的 gap 與時間表現，我們以「$\mu$ 前 $N$ 名子集合」由真實 instance 切出 $N \in \{50, 200, 500, 1000\}$ 共四個子集（並覆寫 $K$）；每個子集的 $\beta, \ell, r_{i,s}$ 等其他參數與真實 instance 一致。這些屬於「真實資料的縮放」，用於 \cref{sec-eval} 的規模敏感度分析（\cref{tab:bench-sweep}）。
 
-\textbf{Self-generated instances — 27 個結構化合成實例。}{}為符合作業 §5「self-generated instances 為必需」、並系統性檢驗演算法在「真實快照永遠落在可行域內」之外的各種市場結構下之行為，我們另外以一套 10 因子實驗設計（DoE）生成 27 個\emph{完全合成}的 instance（程式碼置於 \texttt{synthetic\_data/}）。十個因子涵蓋：universe 規模 $|I|\in\{20,50,100\}$、情境數 $|\Omega|\in\{100,250,500\}$、產業形狀（balanced／concentrated）、報酬分佈（Gaussian／$t(\nu{=}5)$／block-bootstrap）、相關結構（independent／block／factor）、$\beta$ 分佈（tight／wide）、$\mu$–$\beta$ 相關（$0$／$\pm0.5$）、價格分佈（uniform／log-normal，後者刻意觸發 lot-infeasibility）、期初持有（cold／warm）、與壓力組合（normal／tight CVaR／tight industry／infeasibility trap）。所有非變因鎖在中心格 baseline，各子集以 OFAT（one-factor-at-a-time）方式單變一因子，便於在報告中逐列解釋；五個子集 S1–S5 共 27 個 instance（\cref{tab:synth-doe}）。價格以單因子 GBM 模擬、$\beta$ 以兩階段「先抽目標 $\beta$ 再餵入模擬器當 loading」構造、$\mu$ 經 Cholesky 與 $\beta$ 耦合以實現 F7；RNG 以 \texttt{numpy.SeedSequence.spawn()} 為各生成模組獨立散播，確保「同 seed $\to$ 四個 parquet 之 bytes 完全相同」（25 個 pytest 驗證）。合成 instance 與真實 pipeline \emph{共用同一套 Stage 1／Stage 2 程式碼}，僅在 \texttt{params.parquet} 增一個 additive 的 \texttt{mu\_override} 欄、不更動任何 \texttt{MILP\_phase\_*} 模型檔。三層驗證（schema $\to$ economic $\to$ feasibility）結果為 \textbf{24 OK\_FEASIBLE / 3 OK\_RELAXED}（後者全部落在 S4 壓力子集），27 個 instance 全於 $0.23$\,s 內解出。
+\textbf{Self-generated instances — 27 個結構化合成實例。}{}為符合作業 §5「self-generated instances 為必需」、並系統性檢驗演算法在「真實快照永遠落在可行域內」之外的各種市場結構下之行為，我們另外以一套 10 因子實驗設計（DoE）生成 27 個\emph{完全合成}的 instance。十個因子涵蓋：universe 規模 $|I|\in\{20,50,100\}$、情境數 $|\Omega|\in\{100,250,500\}$、產業形狀、報酬分佈、相關結構、$\beta$ 分佈、$\mu$–$\beta$ 相關、價格分佈（uniform／log-normal，後者刻意觸發 lot-infeasibility）、期初持有、與壓力組合。所有非變因鎖在中心格 baseline，各子集以 OFAT方式單變一因子，便於在報告中逐列解釋；五個子集 S1–S5 共 27 個 instance（\cref{tab:synth-doe}）。價格以單因子 GBM 模擬、$\beta$ 以兩階段「先抽目標 $\beta$ 再餵入模擬器當 loading」構造、$\mu$ 經 Cholesky 與 $\beta$ 耦合以實現 F7；RNG 以 \texttt{numpy.SeedSequence.spawn()} 為各生成模組獨立散播，確保「同 seed $\to$ 四個 parquet 之 bytes 完全相同」（25 個 pytest 驗證）。合成 instance 與真實 pipeline \emph{共用同一套 Stage 1／Stage 2 程式碼}，不更動任何 \texttt{MILP\_phase\_*} 模型檔。三層驗證（schema $\to$ economic $\to$ feasibility）結果為 \textbf{24 OK\_FEASIBLE / 3 OK\_RELAXED}（後者全部落在 S4 壓力子集），27 個 instance 全於 $0.23$\,s 內解出。
 
 \begin{table}[!hbt]
 \centering
