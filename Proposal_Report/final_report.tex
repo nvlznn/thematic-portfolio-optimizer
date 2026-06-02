@@ -100,31 +100,30 @@ Final Project Report \\[4pt]
 
 
 
-
 % ============================================================
 \section{Problem description}
 \label{sec-problem}
 
-我們把「主題型再平衡」拆成兩個串接的決策問題。第一階段是\textbf{投資組合配置決策}：在每一個再平衡日 $t$，投資組合經理人需從候選股池中選出恰好 $K$ 檔股票，並決定各股票之目標權重 $w_i$。配置結果須滿足權重總和、持股檔數、單股上下限、產業／主題集中度、Beta、流動性、周轉率與 CVaR 風險限制；目標則是最大化 $\mu^\top w$，其中 $\mu_i$ 表示股票 $i$ 的事前吸引力分數。
+我們把「主題型再平衡」一次性決策拆解為兩個串接的問題：
 
-第二階段是\textbf{交易落地決策}：給定第一階段求得之理想權重 $w^\star$ 與持股名單 $z^\star$，並結合期初張數 $x^0$、期初現金 $C^0$ 與每張價格 $P_i$，決定每檔股票應買入張數 $u_i$、賣出張數 $v_i$、最終持有張數 $x_i$ 與剩餘現金 $C$。此階段要求庫存守恆、現金非負、持股名單延用 Stage 1 結果、買賣互斥，且所有交易張數皆為非負整數。目標是使實際配置盡量貼近 $w^\star$，並加入小幅交易標的數懲罰以避免零碎下單。
+第一階段是\textbf{投資組合配置決策}：在每一個再平衡日 $t$，投資組合經理人需從候選股池中選出恰好 $K$ 檔股票，並決定各股票之目標權重 $w_i$。配置結果須滿足權重總和、持股檔數、單股上下限、產業／主題集中度、Beta、流動性、周轉率與 CVaR 風險限制；目標則是最大化 $\mu^\top w$，其中 $\mu_i$ 表示股票 $i$ 的事前吸引力分數。
 
-\textbf{原本人工 vs.\ 系統化。} \Cref{tab:auto} 摘要原流程中需人工判斷的環節，以及本研究如何以最佳化模型將其系統化。
+第二階段是\textbf{交易落地決策}：已知第一階段給出之理想權重 $w^\star$ 與持股名單 $z^\star$，並給定期初張數 $x^0$、期初現金 $C^0$ 與各檔目前每張價格 $P_i$，決策者要決定每檔股票應買入張數 $u_i$、賣出張數 $v_i$、最終持有張數 $x_i$ 與剩餘現金 $C$。此階段須滿足庫存守恆、現金非負、持股名單延用 Stage 1、買賣互斥，且所有交易張數皆為非負整數。目標是最小化實際相對權重與理想 $w^\star$ 的 L1 偏離，並對交易標的數加入小幅懲罰以避免零碎下單。
+
+\textbf{原本人工 vs.\ 系統化。}{}\Cref{tab:auto} 摘要原流程中需人工判斷的環節，以及本研究如何以最佳化模型將其系統化。
 
 \begin{table}[!hbt]
 \centering
-\scriptsize
-\setlength{\tabcolsep}{4pt}
-\renewcommand{\arraystretch}{0.88}
-\begin{tabular}{p{0.42\textwidth} p{0.50\textwidth}}
+\small
+\begin{tabular}{p{0.42\textwidth} p{0.5\textwidth}}
 \toprule
 原本需人工處理之事項 & 本研究之系統化處理方式 \\
 \midrule
-挑選主題股票與比較投資吸引力 & 依主題、市值、成交值與資料完整性建池，並自動計算可量化 score \\
-控制產業或主題集中度 & 將產業權重上限納入最佳化限制式 \\
-控制市場風險、下檔風險與換股幅度 & 加入 Beta、CVaR 與周轉率限制 \\
-將理想權重轉成可下單張數 & 以整數變數決定買／賣／最終持股張數，並加入現金守恆限制 \\
-產生可執行調倉清單 & 輸出 order sheet：買入／賣出張數與最終現金餘額 \\
+挑選符合主題且可投資之股票、比較投資吸引力 & 依主題／市值／成交值／資料完整性建池，並自動計算動能或營收成長等可量化 score \\
+控制投資組合的產業集中度 & 將產業權重上限納入最佳化限制式 \\
+控制市場與極端下跌風險、避免過度換股 & 加入 Beta 上限、CVaR 下檔風險與周轉率限制 \\
+將理想權重轉成可下單張數、確保現金足夠交割 & 以整數變數決定買／賣／最終持股張數，並以現金守恆方程式保證交易後現金非負 \\
+產生可執行之調倉清單 & 輸出 order sheet：買入／賣出張數與最終現金餘額 \\
 \bottomrule
 \end{tabular}
 \caption{人工流程與本研究系統化處理方式}
@@ -132,101 +131,81 @@ Final Project Report \\[4pt]
 \end{table}
 
 
+
 % ============================================================
 \section{Mathematical model}
 \label{sec-model}
 
-我們以 MILP 描述上述兩階段問題。CVaR、周轉率、L1 偏離與買賣互斥皆以線性限制式表示，因此整體可直接交由 MILP 求解器處理。
+我們以 MILP 嚴格描述上節之兩個決策問題。所有看似非線性的部分（CVaR、周轉率、L1 偏離、買賣互斥）皆已線性化，整個問題可直接交由 MILP 求解器處理。
 
 \subsection{Stage 1：理想投資組合最佳化}
 
-令 $i\in I=\{1,\dots,N\}$ 為候選股，$j\in J=\{1,\dots,M\}$ 為產業／主題群組，$S_j\subseteq I$ 為群組 $j$ 內股票集合，$s\in\Omega$ 為 CVaR 歷史情境。主要參數包含投資吸引力分數 $\mu_i$、Beta $\beta_i$、期初權重 $w_i^0$、單股下／上限 $L,U$、持股檔數 $K$、群組上限 $\gamma_j$、流動性上限 $\ell_i$、周轉率上限 $\tau$、情境報酬 $r_{i,s}$、信賴水準 $\alpha$ 與 CVaR 上限 $\bar C^{\text{risk}}$。決策變數為目標權重 $w_i$、選股變數 $z_i$、周轉率線性化變數 $\delta_i^+,\delta_i^-$、VaR 輔助變數 $\eta$ 與情境超額損失 $\xi_s$。
+令 $i \in I = \{1, \dots, N\}$ 為候選股，$j \in J = \{1, \dots, M\}$ 為產業／主題群組，$S_j \subseteq I$ 為群組 $j$ 內股票集合，$s \in \Omega$ 為 CVaR 歷史情境。主要參數包含投資吸引力分數 $\mu_i$、Beta $\beta_i$、期初權重 $w_i^0$、單股下／上限 $L, U$、持股檔數 $K$、群組上限 $\gamma_j$、流動性上限 $\ell_i$、周轉率上限 $\tau$、情境報酬 $r_{i,s}$、信賴水準 $\alpha$ 與 CVaR 上限 $\bar{C}^{\text{risk}}$。決策變數為目標權重 $w_i$、選股變數 $z_i \in \{0,1\}$、周轉率線性化變數 $\delta_i^+, \delta_i^-$、VaR 輔助變數 $\eta$ 與情境超額損失 $\xi_s$。
 
 \textbf{Stage 1 模型：}
-{\scriptsize
-\setlength{\arraycolsep}{3pt}
 \begin{align}
-\max_{w,z,\delta^\pm,\eta,\xi}\quad 
-& \sum_{i\in I}\mu_i w_i \label{obj1}\\[-1mm]
+\max_{w, z, \delta^\pm, \eta, \xi}\quad & \sum_{i \in I} \mu_i w_i \label{obj1}\\
 \text{s.t.}\quad
-& \sum_{i\in I}w_i=1, 
-&& \sum_{i\in I}z_i=K, \label{c1:basic}\\[-0.5mm]
-& Lz_i\le w_i\le Uz_i,\quad \forall i\in I,
-&& w_i\le \ell_i,\quad \forall i\in I, \label{c1:boxliq}\\[-0.5mm]
-& \sum_{i\in S_j}w_i\le \gamma_j,\quad \forall j\in J,
-&& \sum_{i\in I}\beta_iw_i\le \beta^{\max}, \label{c1:indbeta}\\[-0.5mm]
-& w_i-w_i^0=\delta_i^+-\delta_i^-,\quad \forall i\in I,
-&& \sum_{i\in I}(\delta_i^++\delta_i^-)\le \tau, \label{c1:turn}\\[-0.5mm]
-& \xi_s\ge -\sum_{i\in I}r_{i,s}w_i-\eta,\quad \forall s\in\Omega,
-&& \eta+\frac{1}{(1-\alpha)|\Omega|}\sum_{s\in\Omega}\xi_s\le \bar C^{\text{risk}}, \label{c1:cvar}\\[-0.5mm]
-& w_i,\delta_i^\pm,\xi_s\ge0,\quad \eta\in\mathbb R,
-&& z_i\in\{0,1\},\quad \forall i\in I. \nonumber
+& \sum_{i \in I} w_i = 1, & & \sum_{i \in I} z_i = K, \label{c1:budget}\\
+& L z_i \leq w_i \leq U z_i,\ \forall i \in I, & & w_i \leq \ell_i,\ \forall i \in I, \label{c1:box}\\
+& \sum_{i \in S_j} w_i \leq \gamma_j,\ \forall j \in J, & & \sum_{i \in I} \beta_i w_i \leq \beta^{\max}, \label{c1:ind}\\
+& w_i - w_i^0 = \delta_i^+ - \delta_i^-,\ \forall i \in I, & & \sum_{i \in I} (\delta_i^+ + \delta_i^-) \leq \tau, \label{c1:turn}\\
+& \xi_s \geq -\sum_{i \in I} r_{i,s} w_i - \eta,\ \forall s \in \Omega, & & \eta + \frac{1}{(1-\alpha)|\Omega|}\sum_{s \in \Omega} \xi_s \leq \bar{C}^{\text{risk}}, \label{c1:cvar}\\
+& w_i, \delta_i^\pm, \xi_s \geq 0,\ \eta \in \mathbb{R}, & & z_i \in \{0,1\},\ \forall i \in I. \nonumber
 \end{align}
-}
 
-其中 \Cref{c1:turn} 將 $|w_i-w_i^0|$ 拆為正負兩個非負變數，以線性化周轉率限制；\Cref{c1:cvar} 為 Rockafellar--Uryasev CVaR 線性化形式。
+其中 \Cref{c1:turn} 將 $|w_i - w_i^0|$ 拆成正負兩個非負變數，以線性化周轉率限制；\Cref{c1:cvar} 為 Rockafellar–Uryasev CVaR 線性化形式。
 
 \subsection{Stage 2：交易落地與整數張數轉換}
 
-給定 Stage 1 的解 $(w^\star,z^\star)$，Stage 2 將理想權重轉換為可執行交易張數。令 $P_i$ 為每張價格、$x_i^0$ 為期初張數、$C^0$ 為期初現金、$c_b,c_s$ 為買入／賣出交易成本率，且 $V^0=C^0+\sum_iP_ix_i^0$ 為期初總資產。若股票被選入，最低與最高持有張數分別為 $L_i^{\text{lot}}=\lceil LV^0/P_i\rceil$ 與 $U_i^{\text{lot}}=\lfloor UV^0/P_i\rfloor$；另定義 $\bar u_i=\max(0,U_i^{\text{lot}}-x_i^0)$ 為最大可買入張數。
+給定 Stage 1 的解 $(w^\star, z^\star)$，Stage 2 將理想權重轉換為可執行交易張數。令 $P_i$ 為股票 $i$ 之每張價格（元；1 張 $= 1{,}000$ 股）、$x_i^0$ 為期初持有張數、$C^0$ 為期初現金、$c_b, c_s$ 為買入／賣出交易成本率（後者含證交稅），且 $V^0 = C^0 + \sum_i P_i x_i^0$ 為期初總資產價值。若 $z_i^\star = 1$，股票 $i$ 之最低與最高持有張數分別為 $L_i^{\text{lot}} = \lceil L V^0 / P_i \rceil$ 與 $U_i^{\text{lot}} = \lfloor U V^0 / P_i \rfloor$；另定義 $\bar{u}_i = \max(0,\, U_i^{\text{lot}} - x_i^0)$ 為本期最大可買入張數，並以 $\lambda_{\text{trade}} \geq 0$ 為交易標的數之懲罰係數。決策變數為調倉後最終持有張數 $x_i$、買入張數 $u_i$、賣出張數 $v_i$、剩餘現金 $C$、買賣指示變數 $B_i, Q_i \in \{0,1\}$ 與權重絕對偏離 $d_i$。
 
 \textbf{Stage 2 模型：}
-{\scriptsize
-\setlength{\arraycolsep}{3pt}
 \begin{align}
-\min_{x,u,v,C,B,Q,d}\quad 
-& \sum_{i\in I}d_i+\lambda_{\text{trade}}\sum_{i\in I}(B_i+Q_i) \label{obj2}\\[-1mm]
-\text{s.t.}\quad
-& x_i=x_i^0+u_i-v_i,\quad \forall i\in I, \label{c2:inv}\\[-0.5mm]
-& C=C^0+\sum_{i\in I}P_iv_i(1-c_s)-\sum_{i\in I}P_iu_i(1+c_b), 
-&& C\ge0, \label{c2:cash}\\[-0.5mm]
-& d_i\ge \frac{P_ix_i}{V^0}-w_i^\star,\quad \forall i\in I,
-&& d_i\ge w_i^\star-\frac{P_ix_i}{V^0},\quad \forall i\in I, \label{c2:dev}\\[-0.5mm]
-& L_i^{\text{lot}}z_i^\star\le x_i\le U_i^{\text{lot}}z_i^\star,\quad \forall i\in I, \label{c2:lot}\\[-0.5mm]
-& u_i\le \bar u_iB_i,\quad v_i\le x_i^0Q_i,\quad \forall i\in I,
-&& B_i+Q_i\le1,\quad \forall i\in I, \label{c2:bq}\\[-0.5mm]
-& x_i,u_i,v_i\in\mathbb Z_{\ge0},\quad B_i,Q_i\in\{0,1\},
-&& d_i,C\ge0. \nonumber
+\min_{x, u, v, C, B, Q, d}\quad & \sum_{i \in I} d_i + \lambda_{\text{trade}} \sum_{i \in I} (B_i + Q_i) \label{obj2}\\
+\text{s.t.}\quad & x_i = x_i^0 + u_i - v_i, \quad \forall i \in I \label{c2:inv}\\
+& \mathrlap{C = C^0 + \sum_{i \in I} P_i v_i (1-c_s) - \sum_{i \in I} P_i u_i (1+c_b), \quad C \geq 0} \label{c2:cash}\\
+& d_i \geq P_i x_i / V^0 - w_i^\star,\ \forall i \in I, & & d_i \geq w_i^\star - P_i x_i / V^0,\ \forall i \in I \label{c2:dev}\\
+& \mathrlap{L_i^{\text{lot}} z_i^\star \leq x_i \leq U_i^{\text{lot}} z_i^\star, \quad \forall i \in I} \label{c2:lot}\\
+& u_i \leq \bar{u}_i B_i,\ \ v_i \leq x_i^0 Q_i,\ \forall i \in I, & & B_i + Q_i \leq 1,\ \forall i \in I \label{c2:mutex}\\
+& \mathrlap{x_i, u_i, v_i \in \mathbb{Z}_{\geq 0}; \; B_i, Q_i \in \{0,1\};\; d_i, C \geq 0.} \nonumber
 \end{align}
-}
+\Cref{c2:inv,c2:cash} 分別表示庫存與現金守恆；\Cref{c2:dev} 線性化實際權重與理想權重的 L1 偏離；\Cref{c2:mutex} 限制同一股票不能同時買入與賣出。為維持兩階段一致性，$L_i^{\text{lot}}, U_i^{\text{lot}}$ 亦可反向投影回 Stage 1 的權界 $L_i = L_i^{\text{lot}} P_i / V^0$、$U_i = U_i^{\text{lot}} P_i / V^0$（見 \cref{sec-data}）。
 
-\Cref{c2:inv,c2:cash} 分別表示庫存與現金守恆；\Cref{c2:dev} 線性化實際權重與理想權重的 L1 偏離；\Cref{c2:bq} 限制同一股票不能同時買入與賣出。為維持兩階段一致性，$L_i^{\text{lot}},U_i^{\text{lot}}$ 亦可反向投影回 Stage 1 的權重界。
 
 
 % ============================================================
 \section{Algorithms}
 \label{sec-algo}
 
-Stage 1 使用兩個啟發式方法：\textbf{Top-K} 作為下界基準，\textbf{Greedy} 作為主要求解方法。兩者共用四個子程序：\textsc{Allocate}、\textsc{Repair}、\textsc{Diversify} 與 \textsc{LocalSearch}。預處理時先計算每檔股票的有效上限 $\mathit{cap}_i=\min(U_i,\ell_i)$ 與下限 $\mathit{floor}_i=L_i$，並篩出可選股集合。
+Stage 1 提供兩個啟發式：\textbf{Top-K}（下界基準）與 \textbf{Greedy}（多起點局部搜尋）。兩者共用四個子程序——\textsc{Allocate}（water-filling 配權）、\textsc{Repair}（Beta／CVaR 修復）、\textsc{Diversify}（產業集中度換股）、\textsc{LocalSearch}（1-swap 目標改善）。預處理先計算每檔上限 $\mathit{cap}_i=\min(U_i,\ell_i)$、下限 $\mathit{floor}_i=L_i$，並篩出可選股集合。
 
-\textbf{\textsc{Allocate}} 採用 water-filling 配權。給定持股集合 $S$ 後，先將每檔股票配置至 $\mathit{floor}_i$，再依 $\mu_i$ 由高到低分配剩餘權重，同時受限於 $\mathit{cap}_i$、產業剩餘容量與總預算。此步可確保 Budget、Cardinality、Box、Liquidity 與 Industry 限制成立。
+\textbf{\textsc{Allocate}（water-filling）。}{} 給定持股集合 $S$，先把每檔灌到 $\mathit{floor}_i$ 形成底量；剩餘預算 $1-\sum_{i\in S}\mathit{floor}_i$ 依 $\mu$ 由高到低逐檔分配，受限於 $\mathit{cap}_i$、產業剩餘容量 $\gamma_j-\sum_{i\in S\cap S_j}w_i$ 與殘餘預算。此步保證 Budget、Cardinality、Box、Liquidity、Industry 滿足，Beta 與 CVaR 則交由 \textsc{Repair}。
 
-\textbf{\textsc{Repair}} 用於修復 Beta 與 CVaR 違反。若 $\beta^\top w>\beta^{\max}$ 或 $\mathrm{CVaR}>\bar C^{\text{risk}}$，演算法會將權重從風險分數較高且仍高於下限的股票，移轉至風險分數較低且仍有容量的股票；若無法透過移轉修復，則進行換股。
+\textbf{\textsc{Repair}（Beta／CVaR）。}{} 若 $\beta^\top w>\beta^{\max}$ 或 $\mathrm{CVaR}>\bar{C}^{\text{risk}}$，計算每檔的風險分數（被違反的限制以上限正規化後相加），將權重自分數最高且 $w_i>\mathit{floor}_i$ 的捐贈者搬向分數最低的接收者；若搬不動則換股，重複至兩者皆可行或達上限。
 
-\textbf{Top-K} 直接選取 $\mu_i$ 最高的 $K$ 檔股票，先以 \textsc{Allocate} 配權，若因容量或產業限制導致無法投滿，則呼叫 \textsc{Diversify} 進行被迫換股，最後再以 \textsc{Repair} 修復風險限制。Top-K 不進行主動目標改善，因此主要作為比較基準。
+\textbf{Top-K（基準）。}{} 直接取 $\mu$ 前 $K$ 名為持股、\emph{不檢查任何選股限制}，僅做 \textsc{Allocate}。如圖~\ref{fig:topk}，若因 cap／產業容量無法投滿預算，才\emph{被迫}呼叫 \textsc{Diversify} 換股並重配權，迴圈直到投滿，最後 \textsc{Repair}。它\textbf{不執行目標改善的換股}，角色是凸顯 Greedy 帶來多少額外效益。
 
 \begin{figure}[!hbt]
 \centering
-\includegraphics[width=0.98\linewidth]{top-k-flowchart.png}
+\includegraphics[width=\linewidth]{images/top-k-flowchart.png}
 \caption{Top-K 流程：取 $\mu$ 前 $K$ 名後 \textsc{Allocate} 配權；投不滿預算時被迫 \textsc{Diversify} 換股並重配權，滿足後 \textsc{Repair} 輸出。}
 \label{fig:topk}
 \end{figure}
 
-\textbf{Greedy} 採用多起點局部搜尋。起點 A 由 industry-aware greedy selection 建構，起點 B 則採用 Top-K 解；兩個起點皆經過 \textsc{Allocate} 與 \textsc{Repair} 後，再執行 1-swap \textsc{LocalSearch}。Local search 會嘗試將既有持股替換為高 $\mu_i$ 的非持股候選，並只接受可行且使 $\mu^\top w$ 嚴格上升的換股。由於 Top-K 是 Greedy 的起點之一，Greedy 的目標值保證不低於 Top-K。
+\textbf{Greedy（多起點局部搜尋）。}{} 如圖~\ref{fig:greedy}，同時嘗試兩個起點取最佳：起點 A 以 \textsc{GreedySelect}（依 $\mu$ 加股並守住產業集中度 $\gamma_j$）＋\textsc{Diversify} 建構；起點 B 直接採 Top-K 解。兩者皆經 \textsc{Allocate}＋\textsc{Repair} 後執行 \textsc{LocalSearch}（1-swap，至多 $25$ 輪：把每個持股換成 $\mu$ 前 $n_{\text{cand}}$ 名的非持股候選、重做配權與修復，只接受\emph{可行且 $\mu^\top w$ 嚴格改善}的換股）。因 Top-K 為其中一個起點，Greedy 的目標值\textbf{保證 $\ge$ Top-K}。
 
 \begin{figure}[!hbt]
 \centering
-\includegraphics[width=0.98\linewidth]{greedy-flowchart.png}
-\caption{Greedy 多起點流程：起點 A 與起點 B 各經 \textsc{Allocate}+\textsc{Repair} 與 1-swap \textsc{LocalSearch}，最後取目標值較高者。}
+\includegraphics[width=\linewidth]{images/greedy-flowchart.png}
+\caption{Greedy 多起點流程：起點 A（\textsc{GreedySelect}+\textsc{Diversify}）與起點 B（Top-K 解）各經 \textsc{Allocate}+\textsc{Repair} 與 1-swap \textsc{LocalSearch}，取目標值較高者 $\max(A,B)$。}
 \label{fig:greedy}
 \end{figure}
 
 \begin{table}[!hbt]
 \centering
-\scriptsize
-\setlength{\tabcolsep}{4pt}
-\renewcommand{\arraystretch}{0.9}
-\begin{tabular}{p{0.22\textwidth}p{0.68\textwidth}}
+\small
+\begin{tabular}{l p{0.72\textwidth}}
 \toprule
 Component & Function \\
 \midrule
@@ -237,16 +216,22 @@ Component & Function \\
 \bottomrule
 \end{tabular}
 \caption{Summary of heuristic components}
-\label{tab:heuristic-components}
+\label{tab:heuristic}
 \end{table}
+
 
 % ============================================================
 \section{Data collection and generation}
 \label{sec-data}
 
-\textbf{真實世界資料。}{}本研究所用之台股歷史價量資料來自 \emph{台灣經濟新報 (TEJ)}的資料庫，經由標準化欄位名稱、剔除指數列、處理停牌補值（forward-fill 上限 3 日）、單位換算，再輸出為 \texttt{ prices.parquet}；候選股池與市值、產業由 \texttt{candidates.parquet}提供；日頻 join 完成的價量／市值／beta\_3m／ROE／營收成長表為 \texttt{params.parquet}；大盤指數收盤獨立存於 \texttt{benchmark.parquet} 作為 $\beta$ 回歸用之 market factor。整個資料管線之間以 parquet 為介面，可被多人平行開發。
+\textbf{真實世界資料。}{}本研究所用之台股歷史價量資料來自 \emph{台灣經濟新報 (TEJ)}「日收盤行情」與「TEJ 主產業」資料庫，原始下載放在 \texttt{data/raw/}（CP950/Big-5 編碼），經由 \texttt{src/data/clean.py} 標準化欄位名稱、剔除指數列 (\texttt{Y9999})、處理停牌補值（forward-fill 上限 3 日）、單位換算（張 $\to$ 股、千元 $\to$ 元），再輸出為 \texttt{data/processed/prices.parquet}（§7.1 介面契約）；候選股池與市值、產業由 \texttt{candidates.parquet}（§7.2）提供；日頻 join 完成的價量／市值／beta\_3m／ROE／營收成長表為 \texttt{params.parquet}（§7.3）；大盤指數 (Y9999) 收盤獨立存於 \texttt{benchmark.parquet} 作為 $\beta$ 回歸用之 market factor。整個資料管線在 \texttt{src/data/} 與 \texttt{MILP\_phase\_1/stage1/data\_prep.py} 之間以 parquet 為介面，可被多人平行開發。
 
-\textbf{參數估計 — Module 2 (\texttt{src/params/})。}
+\textbf{參數估計 — Module 2 (\texttt{src/params/})。}{}吸引力分數、Beta、流動性上限與 CVaR 情境四項由獨立模組 \texttt{src/params/} 預先計算後寫入兩個契約檔：
+\begin{itemizeTight}
+    \item \texttt{factors.parquet}（每檔一列）：欄位 \texttt{stock\_id, mu, beta, liquidity\_cap, w0, industry, as\_of}；
+    \item \texttt{scenarios.parquet}（每個情境一列）：欄位 \texttt{scenario\_id} 加上每檔股票一欄，值為情境報酬 $r_{i,s}$。
+\end{itemizeTight}
+入口為 \texttt{python -m src.params.build}，會根據 \texttt{MILP\_phase\_1/stage1/config.yaml} 內的 \texttt{mu / beta / liquidity / scenarios} 區段，於 \texttt{as\_of} 重新算齊所有參數；Stage 1 之 \texttt{data\_prep.py} 預設讀這兩個檔，若不存在或 \texttt{as\_of} 不符則 fallback 為即時計算，確保介面變動不會打斷下游。六個關鍵參數的構造如下：
 \begin{itemizeTight}
     \item \textbf{$\mu_i$（吸引力分數，\texttt{params/mu.py}）}：基準版採 12-1 動能——過去 11 個月對數報酬、排除最近 1 個月以避開短期反轉；可選「動能 + ROE z-score」混合版（\texttt{config.yaml.mu.method=blend}）。資料若可用視窗不足會自動降階到實際可用天數。
     \item \textbf{$\beta_i$（\texttt{params/beta.py}）}：預設以個股對 TAIEX (Y9999) 之過去 120 日對數報酬做滾動 OLS（method=\texttt{ols}），同檔提供 \texttt{tej\_params}（讀 \texttt{params.parquet} 的 \texttt{beta\_3m}）與 \texttt{tej\_raw}（解析原始 \texttt{raw\_beta.csv}）兩個備援。所有來源最後一律 winsorize 到 $[-1, 3]$ 並把缺值補成 $\beta_i = 1.0$。
@@ -258,7 +243,7 @@ Component & Function \\
 
 \textbf{規模掃描子集（real-data subsets）。}{}為觀察演算法在不同 universe 規模下的 gap 與時間表現，我們以「$\mu$ 前 $N$ 名子集合」由真實 instance 切出 $N \in \{50, 200, 500, 1000\}$ 共四個子集（並覆寫 $K$）；每個子集的 $\beta, \ell, r_{i,s}$ 等其他參數與真實 instance 一致。這些屬於「真實資料的縮放」，用於 \cref{sec-eval} 的規模敏感度分析（\cref{tab:bench-sweep}）。
 
-\textbf{Self-generated instances — 27 個結構化合成實例。}{}為符合作業 §5「self-generated instances 為必需」、並系統性檢驗演算法在「真實快照永遠落在可行域內」之外的各種市場結構下之行為，我們另外以一套 10 因子實驗設計（DoE）生成 27 個\emph{完全合成}的 instance。十個因子涵蓋：universe 規模 $|I|\in\{20,50,100\}$、情境數 $|\Omega|\in\{100,250,500\}$、產業形狀、報酬分佈、相關結構、$\beta$ 分佈、$\mu$–$\beta$ 相關、價格分佈（uniform／log-normal，後者刻意觸發 lot-infeasibility）、期初持有、與壓力組合。所有非變因鎖在中心格 baseline，各子集以 OFAT方式單變一因子，便於在報告中逐列解釋；五個子集 S1–S5 共 27 個 instance（\cref{tab:synth-doe}）。價格以單因子 GBM 模擬、$\beta$ 以兩階段「先抽目標 $\beta$ 再餵入模擬器當 loading」構造、$\mu$ 經 Cholesky 與 $\beta$ 耦合以實現 F7；RNG 以 \texttt{numpy.SeedSequence.spawn()} 為各生成模組獨立散播，確保「同 seed $\to$ 四個 parquet 之 bytes 完全相同」（25 個 pytest 驗證）。合成 instance 與真實 pipeline \emph{共用同一套 Stage 1／Stage 2 程式碼}，不更動任何 \texttt{MILP\_phase\_*} 模型檔。三層驗證（schema $\to$ economic $\to$ feasibility）結果為 \textbf{24 OK\_FEASIBLE / 3 OK\_RELAXED}（後者全部落在 S4 壓力子集），27 個 instance 全於 $0.23$\,s 內解出。
+\textbf{Self-generated instances — 27 個結構化合成實例。}{}為符合作業 §5「self-generated instances 為必需」、並系統性檢驗演算法在「真實快照永遠落在可行域內」之外的各種市場結構下之行為，我們另外以一套 10 因子實驗設計（DoE）生成 27 個\emph{完全合成}的 instance（程式碼置於 \texttt{synthetic\_data/}）。十個因子涵蓋：universe 規模 $|I|\in\{20,50,100\}$、情境數 $|\Omega|\in\{100,250,500\}$、產業形狀（balanced／concentrated）、報酬分佈（Gaussian／$t(\nu{=}5)$／block-bootstrap）、相關結構（independent／block／factor）、$\beta$ 分佈（tight／wide）、$\mu$–$\beta$ 相關（$0$／$\pm0.5$）、價格分佈（uniform／log-normal，後者刻意觸發 lot-infeasibility）、期初持有（cold／warm）、與壓力組合（normal／tight CVaR／tight industry／infeasibility trap）。所有非變因鎖在中心格 baseline，各子集以 OFAT（one-factor-at-a-time）方式單變一因子，便於在報告中逐列解釋；五個子集 S1–S5 共 27 個 instance（\cref{tab:synth-doe}）。價格以單因子 GBM 模擬、$\beta$ 以兩階段「先抽目標 $\beta$ 再餵入模擬器當 loading」構造、$\mu$ 經 Cholesky 與 $\beta$ 耦合以實現 F7；RNG 以 \texttt{numpy.SeedSequence.spawn()} 為各生成模組獨立散播，確保「同 seed $\to$ 四個 parquet 之 bytes 完全相同」（25 個 pytest 驗證）。合成 instance 與真實 pipeline \emph{共用同一套 Stage 1／Stage 2 程式碼}，僅在 \texttt{params.parquet} 增一個 additive 的 \texttt{mu\_override} 欄、不更動任何 \texttt{MILP\_phase\_*} 模型檔。三層驗證（schema $\to$ economic $\to$ feasibility）結果為 \textbf{24 OK\_FEASIBLE / 3 OK\_RELAXED}（後者全部落在 S4 壓力子集），27 個 instance 全於 $0.23$\,s 內解出。
 
 \begin{table}[!hbt]
 \centering
